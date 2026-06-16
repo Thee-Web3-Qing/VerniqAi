@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Verniq"
+version = "1.0.0"
+id = "artifacts/verniq"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21074
+
+[services.development]
+run = "pnpm --filter @workspace/verniq run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/verniq", "run", "build" ]
+publicDir = "artifacts/verniq/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21074"
+BASE_PATH = "/"

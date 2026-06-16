@@ -1,0 +1,2 @@
+- [Clerk proxy URL pattern](clerk-proxy-url.md) — VITE_CLERK_PROXY_URL must NOT have a fallback; empty in dev is intentional.
+- [Verniq stack](verniq-stack.md) — Clerk auth + Postgres/Drizzle + Express api-server; Voice DNA logic is client-side in src/lib/verniq-store.ts.

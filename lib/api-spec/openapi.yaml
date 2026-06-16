@@ -1,22 +1,29 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Verniq API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: profile
+    description: User profile operations
+  - name: drafts
+    description: Draft content operations
+  - name: creators
+    description: Creator marketplace operations
+  - name: transcribe
+    description: Audio transcription
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +31,160 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /profile:
+    get:
+      operationId: getMyProfile
+      tags: [profile]
+      summary: Get my profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "404":
+          description: Not found
+    put:
+      operationId: updateMyProfile
+      tags: [profile]
+      summary: Update my profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /drafts:
+    get:
+      operationId: listDrafts
+      tags: [drafts]
+      summary: List my drafts
+      responses:
+        "200":
+          description: List of drafts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Draft"
+    post:
+      operationId: createDraft
+      tags: [drafts]
+      summary: Save a new draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DraftInput"
+      responses:
+        "201":
+          description: Created draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Draft"
+
+  /drafts/{id}:
+    get:
+      operationId: getDraft
+      tags: [drafts]
+      summary: Get a draft by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Draft"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteDraft
+      tags: [drafts]
+      summary: Delete a draft
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /creators:
+    get:
+      operationId: listCreators
+      tags: [creators]
+      summary: List public creators
+      responses:
+        "200":
+          description: List of public creator profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Profile"
+
+  /creators/{id}:
+    get:
+      operationId: getCreator
+      tags: [creators]
+      summary: Get a public creator by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Creator profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "404":
+          description: Not found
+
+  /transcribe:
+    post:
+      operationId: transcribeAudio
+      tags: [transcribe]
+      summary: Transcribe audio to text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscribeInput"
+      responses:
+        "200":
+          description: Transcript
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscribeResult"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +195,156 @@ components:
       required:
         - status
 
+    VoiceDNA:
+      type: object
+      properties:
+        tone:
+          type: string
+        energy:
+          type: string
+        avgSentenceLength:
+          type: integer
+        hookStyle:
+          type: string
+        closingStyle:
+          type: string
+        signaturePhrases:
+          type: array
+          items:
+            type: string
+        formalityScore:
+          type: integer
+        sampleCount:
+          type: integer
+        source:
+          type: string
+          enum: ["writer", "video"]
+        summary:
+          type: string
+        lastUpdated:
+          type: string
+      required:
+        - tone
+        - energy
+        - avgSentenceLength
+        - hookStyle
+        - closingStyle
+        - signaturePhrases
+        - formalityScore
+        - sampleCount
+        - source
+        - summary
+        - lastUpdated
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+        display_name:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        niche:
+          type: ["string", "null"]
+        avatar_url:
+          type: ["string", "null"]
+        is_public_creator:
+          type: boolean
+        voice_dna:
+          oneOf:
+            - $ref: "#/components/schemas/VoiceDNA"
+            - type: "null"
+        follower_count:
+          type: integer
+        created_at:
+          type: string
+        updated_at:
+          type: string
+      required:
+        - id
+        - is_public_creator
+        - follower_count
+        - created_at
+        - updated_at
+
+    ProfileUpdate:
+      type: object
+      properties:
+        display_name:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        niche:
+          type: ["string", "null"]
+        is_public_creator:
+          type: boolean
+        voice_dna:
+          oneOf:
+            - $ref: "#/components/schemas/VoiceDNA"
+            - type: "null"
+
+    Draft:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        idea:
+          type: string
+        tiktok:
+          type: ["string", "null"]
+        twitter:
+          type: ["array", "null"]
+          items:
+            type: string
+        voice_match:
+          type: integer
+        created_at:
+          type: string
+        updated_at:
+          type: string
+      required:
+        - id
+        - user_id
+        - idea
+        - voice_match
+        - created_at
+        - updated_at
+
+    DraftInput:
+      type: object
+      properties:
+        idea:
+          type: string
+        tiktok:
+          type: ["string", "null"]
+        twitter:
+          type: ["array", "null"]
+          items:
+            type: string
+        voice_match:
+          type: integer
+      required:
+        - idea
+        - voice_match
+
+    TranscribeInput:
+      type: object
+      properties:
+        audioBase64:
+          type: string
+        mime:
+          type: string
+      required:
+        - audioBase64
+        - mime
+
+    TranscribeResult:
+      type: object
+      properties:
+        transcript:
+          type: string
+      required:
+        - transcript
