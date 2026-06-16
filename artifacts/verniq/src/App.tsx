@@ -19,6 +19,7 @@ import History from "@/pages/History";
 import Profile from "@/pages/Profile";
 import Creators from "@/pages/Creators";
 import CreatorProfile from "@/pages/CreatorProfile";
+import { Logo } from "@/components/Logo";
 
 // REQUIRED — resolves the key from window.location.hostname so the same
 // build serves multiple Clerk custom domains.
@@ -55,52 +56,51 @@ function Layout({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const { signOut } = useClerk();
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground dark">
+    <div className="min-h-screen flex flex-col bg-background text-foreground dark grid-texture">
       <header className="border-b border-border sticky top-0 bg-background/80 backdrop-blur z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <button
-              className="text-xl font-bold font-serif tracking-tighter text-primary"
               onClick={() => setLocation("/")}
               data-testid="nav-logo"
             >
-              Verniq.
+              <Logo />
             </button>
             <nav className="hidden md:flex gap-6">
               <button
-                className="text-sm font-bold font-mono text-muted-foreground hover:text-primary transition-colors"
+                className="text-sm font-bold font-sans text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setLocation("/create")}
                 data-testid="nav-create"
               >
-                Create
+                For creators
               </button>
               <button
-                className="text-sm font-bold font-mono text-muted-foreground hover:text-primary transition-colors"
+                className="text-sm font-bold font-sans text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setLocation("/history")}
                 data-testid="nav-history"
               >
                 History
               </button>
               <button
-                className="text-sm font-bold font-mono text-muted-foreground hover:text-primary transition-colors"
+                className="text-sm font-bold font-sans text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setLocation("/creators")}
                 data-testid="nav-creators"
               >
-                Creators
+                Marketplace
               </button>
             </nav>
           </div>
           <div className="flex items-center gap-4">
             <Show when="signed-in">
               <button
-                className="text-sm font-bold font-mono hover:text-primary"
+                className="text-sm font-bold font-sans hover:text-primary transition-colors"
                 onClick={() => setLocation("/profile")}
                 data-testid="nav-profile"
               >
                 Profile
               </button>
               <button
-                className="text-sm font-bold font-mono text-muted-foreground hover:text-destructive"
+                className="text-sm font-bold font-sans text-muted-foreground hover:text-destructive transition-colors"
                 onClick={() => signOut({ redirectUrl: basePath || "/" })}
                 data-testid="nav-signout"
               >
@@ -109,11 +109,18 @@ function Layout({ children }: { children: ReactNode }) {
             </Show>
             <Show when="signed-out">
               <button
-                className="text-sm font-bold font-mono hover:text-primary"
+                className="text-sm font-bold font-sans text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setLocation("/auth")}
                 data-testid="nav-signin"
               >
                 Sign in
+              </button>
+              <button
+                className="text-sm font-bold font-sans bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
+                onClick={() => setLocation("/auth#signup")}
+                data-testid="nav-get-started"
+              >
+                Get started
               </button>
             </Show>
           </div>

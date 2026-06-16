@@ -96,7 +96,7 @@ export default function Create() {
     return (
       <div className="container mx-auto px-4 py-24 flex flex-col items-center justify-center min-h-[60vh]">
         <div className="w-full max-w-md">
-          <h2 className="text-2xl font-serif font-bold mb-8 text-center text-primary">Running Verniq Protocol</h2>
+          <h2 className="text-2xl font-sans font-black mb-8 text-center text-primary">Running Verniq Protocol</h2>
           <div className="space-y-4">
             {WORKFLOW_STEPS.map((step, idx) => (
               <motion.div 
@@ -125,7 +125,7 @@ export default function Create() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
       <header className="mb-12 border-b border-border pb-8">
-        <h1 className="text-3xl font-bold font-serif mb-2">Create Content</h1>
+        <h1 className="text-4xl font-black font-sans mb-2">Create Content</h1>
         <p className="text-muted-foreground font-mono text-sm">Input your idea. Verniq will repurpose it using your Voice DNA.</p>
       </header>
 
@@ -156,9 +156,9 @@ export default function Create() {
           <button
             onClick={handleGenerate}
             disabled={!idea.trim()}
-            className="px-8 py-4 bg-primary text-primary-foreground font-bold rounded text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(0,255,255,0.1)]"
+            className="px-8 py-4 bg-primary text-primary-foreground font-bold rounded text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
           >
-            Generate Workflow
+            Generate Workflow →
           </button>
         </div>
       </div>

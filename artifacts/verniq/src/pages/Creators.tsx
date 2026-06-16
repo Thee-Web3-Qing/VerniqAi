@@ -9,8 +9,8 @@ export default function Creators() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-6xl">
       <header className="mb-12 text-center">
-        <h1 className="text-4xl font-bold font-serif mb-4">Creator Marketplace</h1>
-        <p className="text-muted-foreground font-mono text-sm max-w-xl mx-auto">
+        <h1 className="text-4xl font-black font-sans mb-4">Creator Marketplace</h1>
+        <p className="text-muted-foreground text-sm max-w-xl mx-auto">
           Borrow established Voice DNAs for your own content. Find a creator whose style matches the vibe you're looking for.
         </p>
       </header>

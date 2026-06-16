@@ -10,7 +10,7 @@ export default function History() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <header className="mb-12 border-b border-border pb-8">
-        <h1 className="text-3xl font-bold font-serif mb-2">History</h1>
+        <h1 className="text-4xl font-black font-sans mb-2">History</h1>
         <p className="text-muted-foreground font-mono text-sm">Your previously generated and saved ideas.</p>
       </header>
 
@@ -21,7 +21,7 @@ export default function History() {
             onClick={() => setLocation("/create")}
             className="px-6 py-2 bg-primary text-primary-foreground font-bold rounded text-sm hover:bg-primary/90 transition-colors"
           >
-            Create New
+            Create New →
           </button>
         </div>
       ) : (

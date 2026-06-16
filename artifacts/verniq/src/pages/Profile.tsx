@@ -36,7 +36,7 @@ export default function Profile() {
     <div className="container mx-auto px-4 py-12 max-w-4xl grid md:grid-cols-[1fr_300px] gap-8">
       <div>
         <header className="mb-8 border-b border-border pb-4">
-          <h1 className="text-3xl font-bold font-serif">Profile Settings</h1>
+          <h1 className="text-4xl font-black font-sans">Profile Settings</h1>
         </header>
 
         <div className="space-y-6">
@@ -88,14 +88,14 @@ export default function Profile() {
             disabled={updateProfile.isPending}
             className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded hover:bg-primary/90 disabled:opacity-50"
           >
-            {updateProfile.isPending ? "Saving..." : "Save Profile"}
+            {updateProfile.isPending ? "Saving..." : "Save Profile →"}
           </button>
         </div>
       </div>
 
       <div>
         <div className="bg-card border border-border p-6 rounded-lg sticky top-24">
-          <h2 className="text-lg font-bold font-serif mb-4 pb-2 border-b border-border/50 text-primary">Voice DNA Summary</h2>
+          <h2 className="text-lg font-black font-sans mb-4 pb-2 border-b border-border/50 text-primary">Voice DNA Summary</h2>
           {profile?.voice_dna ? (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground italic">"{profile.voice_dna.summary}"</p>

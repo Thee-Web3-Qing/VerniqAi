@@ -51,7 +51,7 @@ export default function Results() {
     <div className="container mx-auto px-4 py-12 max-w-4xl">
       <header className="mb-12 border-b border-border pb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-serif mb-2">Generated Output</h1>
+          <h1 className="text-4xl font-black font-sans mb-2">Generated Output</h1>
           <p className="text-muted-foreground font-mono text-sm">Voice match: {data.voiceMatch}%</p>
         </div>
         <div className="flex gap-4">
@@ -66,23 +66,23 @@ export default function Results() {
             data-testid="button-save-draft"
             onClick={handleSave}
             disabled={createDraft.isPending}
-            className="px-6 py-2 bg-primary text-primary-foreground font-bold rounded text-sm hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(0,255,255,0.1)]"
+            className="px-6 py-2 bg-primary text-primary-foreground font-bold rounded text-sm hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
           >
-            {createDraft.isPending ? "Saving..." : "Save Draft"}
+            {createDraft.isPending ? "Saving..." : "Save Draft →"}
           </button>
         </div>
       </header>
 
       <div className="grid md:grid-cols-2 gap-8">
         <section className="bg-card border border-border p-6 rounded-lg">
-          <h2 className="text-xl font-bold mb-4 font-serif text-primary">TikTok Script</h2>
+          <h2 className="text-xl font-black mb-4 font-sans text-primary">TikTok Script</h2>
           <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-card-foreground">
             {data.tiktok}
           </pre>
         </section>
 
         <section className="bg-card border border-border p-6 rounded-lg">
-          <h2 className="text-xl font-bold mb-4 font-serif text-primary">Twitter Thread</h2>
+          <h2 className="text-xl font-black mb-4 font-sans text-primary">Twitter Thread</h2>
           <div className="space-y-4">
             {data.twitter?.map((tweet: string, idx: number) => (
               <div key={idx} className="p-4 border border-border/50 rounded bg-background/50 text-sm leading-relaxed">

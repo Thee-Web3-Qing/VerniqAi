@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useUpdateMyProfile, useTranscribeAudio } from "@workspace/api-client-react";
 import { analyzeSamples } from "../lib/verniq-store";
 import { Mic } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
@@ -78,9 +79,24 @@ export default function Onboarding() {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
-      <header className="mb-12 text-center">
-        <h1 className="text-4xl font-bold font-serif mb-4">Initialize Voice DNA</h1>
-        <p className="text-muted-foreground font-mono text-sm max-w-xl mx-auto">
+      <div className="flex items-center justify-between mb-12">
+        <Logo />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+             <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm">✓</div>
+             <div className="h-0.5 w-8 bg-primary"></div>
+             <div className="w-8 h-8 rounded bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm">02</div>
+             <div className="h-0.5 w-8 bg-border"></div>
+             <div className="w-8 h-8 rounded-full border border-border text-muted-foreground flex items-center justify-center font-bold text-sm">03</div>
+             <div className="h-0.5 w-8 bg-border"></div>
+             <div className="w-8 h-8 rounded-full border border-border text-muted-foreground flex items-center justify-center font-bold text-sm">04</div>
+          </div>
+        </div>
+      </div>
+
+      <header className="mb-12">
+        <h1 className="text-4xl font-black font-sans mb-4">Initialize Voice DNA</h1>
+        <p className="text-muted-foreground text-lg max-w-xl">
           Verniq needs to learn your unique style. Provide samples of your previous work so we can build your profile.
         </p>
       </header>
@@ -88,16 +104,16 @@ export default function Onboarding() {
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="flex border-b border-border">
           <button 
-            className={`flex-1 py-4 text-sm font-bold font-mono transition-colors ${mode === 'writer' ? 'bg-primary/10 text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-muted'}`}
+            className={`flex-1 py-4 text-sm font-bold transition-colors ${mode === 'writer' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
             onClick={() => setMode("writer")}
           >
-            Writer Mode
+            Writer
           </button>
           <button 
-            className={`flex-1 py-4 text-sm font-bold font-mono transition-colors ${mode === 'video' ? 'bg-primary/10 text-primary border-b-2 border-primary' : 'text-muted-foreground hover:bg-muted'}`}
+            className={`flex-1 py-4 text-sm font-bold transition-colors ${mode === 'video' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
             onClick={() => setMode("video")}
           >
-            Video / Audio Mode
+            Video creator
           </button>
         </div>
 
@@ -110,23 +126,25 @@ export default function Onboarding() {
                 <textarea 
                   value={samples}
                   onChange={(e) => setSamples(e.target.value)}
-                  className="w-full h-64 bg-background border border-border rounded p-4 font-sans text-sm focus:outline-none focus:border-primary transition-colors"
+                  className="w-full h-64 bg-input border-0 rounded p-4 font-sans text-sm focus:outline-none focus:ring-1 focus:ring-primary transition-colors text-foreground"
                   placeholder="Sample 1 content goes here...&#10;---&#10;Sample 2 content goes here..."
                 />
               </div>
-              <button 
-                onClick={() => handleSave(samples)}
-                disabled={!samples.trim() || updateProfile.isPending}
-                className="w-full py-4 bg-primary text-primary-foreground font-bold rounded hover:bg-primary/90 disabled:opacity-50"
-              >
-                {updateProfile.isPending ? "Analyzing & Saving..." : "Analyze & Build DNA"}
-              </button>
+              <div className="flex justify-end">
+                <button 
+                  onClick={() => handleSave(samples)}
+                  disabled={!samples.trim() || updateProfile.isPending}
+                  className="py-3 px-6 bg-primary text-primary-foreground font-bold rounded hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {updateProfile.isPending ? "Analyzing..." : "Analyze my voice →"}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-8 text-center py-8">
               <div>
                 <label className="block text-lg font-bold mb-2">Speak naturally</label>
-                <p className="text-sm text-muted-foreground font-mono mb-8">Record yourself talking about a topic for at least 30 seconds.</p>
+                <p className="text-sm text-muted-foreground mb-8">Record yourself talking about a topic for at least 30 seconds.</p>
                 
                 <button
                   onClick={isRecording ? stopRecording : startRecording}
@@ -136,7 +154,7 @@ export default function Onboarding() {
                   <Mic className="w-12 h-12" />
                 </button>
                 
-                <p className="mt-8 font-mono text-sm h-6">
+                <p className="mt-8 text-sm h-6 text-muted-foreground">
                   {isRecording ? "Recording... Click to stop." : 
                    transcribeAudio.isPending ? "Transcribing audio..." : 
                    updateProfile.isPending ? "Analyzing voice DNA..." : 
