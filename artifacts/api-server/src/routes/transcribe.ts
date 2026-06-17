@@ -25,7 +25,7 @@ router.post("/transcribe", requireAuth, async (req, res) => {
     const formData = new FormData();
     const blob = new Blob([buffer], { type: mime });
     formData.append("file", blob, `audio.${mime.split("/")[1] ?? "webm"}`);
-    formData.append("model", "saarika:v2");
+    formData.append("model", "saarika:v2.5");
     formData.append("language_code", "unknown");
 
     const response = await fetch("https://api.sarvam.ai/speech-to-text", {
