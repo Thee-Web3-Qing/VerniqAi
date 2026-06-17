@@ -11,7 +11,6 @@ export interface HealthStatus {
 
 export type VoiceDNASource = typeof VoiceDNASource[keyof typeof VoiceDNASource];
 
-
 export const VoiceDNASource = {
   writer: 'writer',
   video: 'video',
@@ -29,6 +28,11 @@ export interface VoiceDNA {
   source: VoiceDNASource;
   summary: string;
   lastUpdated: string;
+  // Extended fields from Qwen analysis
+  emotions?: string;
+  charisma?: string;
+  pacing?: string;
+  contentStyle?: string;
 }
 
 export interface Profile {
@@ -84,18 +88,52 @@ export interface DraftInput {
 export interface TranscribeInput {
   audioBase64: string;
   mime: string;
+  audioDurationSeconds?: number;
 }
 
 export interface TranscribeResult {
   transcript: string;
+  wpm?: number | null;
+  wordCount?: number;
 }
+
+export type ContentPlatform =
+  | 'tiktok'
+  | 'twitter'
+  | 'instagram'
+  | 'youtube-shorts'
+  | 'linkedin'
+  | 'podcast'
+  | 'newsletter';
 
 export interface GenerateInput {
   idea: string;
+  platform?: ContentPlatform;
 }
 
 export interface GenerateResult {
-  tiktok: string;
-  twitter: string[];
+  platform: ContentPlatform;
+  output: string;
+  parts: string[] | null;
+  /** @deprecated use output/parts */
+  tiktok?: string;
+  /** @deprecated use parts */
+  twitter?: string[] | null;
 }
 
+export interface AnalysisStep {
+  category: string;
+  emoji: string;
+  value: string;
+  reasoning: string;
+}
+
+export interface AnalyseVoiceInput {
+  text: string;
+  audioDurationSeconds?: number;
+}
+
+export interface AnalyseVoiceResult {
+  steps: AnalysisStep[];
+  voiceDna: VoiceDNA;
+}

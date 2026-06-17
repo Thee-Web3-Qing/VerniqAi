@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AnalyseVoiceInput,
+  AnalyseVoiceResult,
   Draft,
   DraftInput,
   GenerateInput,
@@ -787,6 +789,52 @@ export const useTranscribeAudio = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getTranscribeAudioMutationOptions(options));
     }
+
+// ---------------------------------------------------------------------------
+// Analyse voice (Qwen AI — returns steps + voiceDna)
+// ---------------------------------------------------------------------------
+
+export const analyseVoice = async (
+  data: AnalyseVoiceInput,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<AnalyseVoiceResult> => {
+  return customFetch<AnalyseVoiceResult>(`/api/analyse-voice`, {
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const getAnalyseVoiceMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof analyseVoice>>, TError, { data: BodyType<AnalyseVoiceInput> }, TContext>, request?: SecondParameter<typeof customFetch> }
+): UseMutationOptions<Awaited<ReturnType<typeof analyseVoice>>, TError, { data: BodyType<AnalyseVoiceInput> }, TContext> => {
+  const mutationKey = ['analyseVoice'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseVoice>>, { data: BodyType<AnalyseVoiceInput> }> = (props) => {
+    const { data } = props ?? {};
+    return analyseVoice(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AnalyseVoiceMutationResult = NonNullable<Awaited<ReturnType<typeof analyseVoice>>>;
+export type AnalyseVoiceMutationBody = BodyType<AnalyseVoiceInput>;
+export type AnalyseVoiceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Analyse voice DNA with Qwen AI — returns 8-dimension analysis + voiceDna
+ */
+export const useAnalyseVoice = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof analyseVoice>>, TError, { data: BodyType<AnalyseVoiceInput> }, TContext>, request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof analyseVoice>>, TError, { data: BodyType<AnalyseVoiceInput> }, TContext> => {
+  return useMutation(getAnalyseVoiceMutationOptions(options));
+};
 
 // ---------------------------------------------------------------------------
 // Generate content (Qwen AI)

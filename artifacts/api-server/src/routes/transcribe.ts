@@ -4,7 +4,11 @@ import { requireAuth } from "../middlewares/requireAuth";
 const router = Router();
 
 router.post("/transcribe", requireAuth, async (req, res) => {
-  const { audioBase64, mime } = req.body;
+  const { audioBase64, mime, audioDurationSeconds } = req.body as {
+    audioBase64?: string;
+    mime?: string;
+    audioDurationSeconds?: number;
+  };
 
   if (!audioBase64 || !mime) {
     res.status(400).json({ error: "audioBase64 and mime are required" });
@@ -46,7 +50,12 @@ router.post("/transcribe", requireAuth, async (req, res) => {
     const data = (await response.json()) as Record<string, unknown>;
     console.log("Sarvam v2.5 response shape:", JSON.stringify(data));
     const transcript = (data.transcript ?? data.text ?? data.transcription ?? "") as string;
-    res.json({ transcript });
+    const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+    const wpm =
+      audioDurationSeconds && audioDurationSeconds > 0
+        ? Math.round((wordCount / audioDurationSeconds) * 60)
+        : null;
+    res.json({ transcript, wpm, wordCount });
   } catch (err) {
     console.error("Transcription error:", err);
     res.status(500).json({ error: "Transcription failed" });
