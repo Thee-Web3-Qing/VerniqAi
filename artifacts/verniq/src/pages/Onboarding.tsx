@@ -15,6 +15,9 @@ const PRE_STEPS = [
   { id: "map",     emoji: "🧠", label: "Mapping 8 dimensions" },
 ];
 
+// Index of the last pre-step that shows the long progress bar
+const MAP_STEP_IDX = PRE_STEPS.length - 1;
+
 export default function Onboarding() {
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<"writer" | "video">("writer");
@@ -33,6 +36,9 @@ export default function Onboarding() {
   const [voiceDna, setVoiceDna] = useState<VoiceDNA | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [showDna, setShowDna] = useState(false);
+  // Progress bar for "Mapping 8 dimensions" — fake linear fill while API is in flight
+  const [mapBarPct, setMapBarPct] = useState(0);
+  const mapBarIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const updateProfile = useUpdateMyProfile();
   const transcribeAudio = useTranscribeAudio();
@@ -47,16 +53,38 @@ export default function Onboarding() {
     if (stage !== "analysing") return;
     let idx = 0;
     setActivePreStep(0);
+    setMapBarPct(0);
     const interval = setInterval(() => {
       idx += 1;
       if (idx < PRE_STEPS.length) {
         setDonePreSteps((prev) => new Set([...prev, PRE_STEPS[idx - 1].id]));
         setActivePreStep(idx);
+        // Start the map bar when last pre-step becomes active
+        if (idx === MAP_STEP_IDX) {
+          if (mapBarIntervalRef.current) clearInterval(mapBarIntervalRef.current);
+          mapBarIntervalRef.current = setInterval(() => {
+            setMapBarPct((p) => {
+              if (p >= 90) {
+                clearInterval(mapBarIntervalRef.current!);
+                return 90;
+              }
+              return p + 0.25;
+            });
+          }, 100);
+        }
       } else {
         clearInterval(interval);
       }
     }, 800);
     return () => clearInterval(interval);
+  }, [stage]);
+
+  // Complete the map bar when API returns
+  useEffect(() => {
+    if (stage === "review" || stage === "saving") {
+      if (mapBarIntervalRef.current) clearInterval(mapBarIntervalRef.current);
+      setMapBarPct(100);
+    }
   }, [stage]);
 
   const startRecording = async () => {
@@ -206,27 +234,40 @@ export default function Onboarding() {
               const isDone = donePreSteps.has(step.id);
               const isActive = activePreStep === i && stage === "analysing";
               const isVisible = isDone || isActive || i < activePreStep;
+              const isMapStep = i === MAP_STEP_IDX;
 
               if (!isVisible) return null;
 
               return (
-                <motion.div
-                  key={step.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="flex items-center gap-3 py-1"
-                >
-                  {isDone ? (
-                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <SpinnerIcon />
-                  )}
-                  <span className={isDone ? "text-muted-foreground" : "text-foreground"}>
-                    {step.emoji} {step.label}
-                  </span>
-                  {isDone && (
-                    <span className="text-green-500 text-xs ml-auto">done</span>
+                <motion.div key={step.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25 }}>
+                  <div className="flex items-center gap-3 py-1">
+                    {isDone ? (
+                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <SpinnerIcon />
+                    )}
+                    <span className={isDone ? "text-muted-foreground" : "text-foreground"}>
+                      {step.emoji} {step.label}
+                    </span>
+                    {isDone && <span className="text-green-500 text-xs ml-auto">done</span>}
+                  </div>
+                  {/* Progress bar — only on the "Mapping 8 dimensions" step while active or completing */}
+                  {isMapStep && (isActive || (isDone && mapBarPct > 0)) && (
+                    <div className="pl-7 pb-2">
+                      <div className="h-0.5 bg-border overflow-hidden w-full mt-1">
+                        <motion.div
+                          className="h-full bg-primary"
+                          style={{ width: `${mapBarPct}%` }}
+                          transition={{ duration: 0.2 }}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-xs text-muted-foreground/60">
+                          {isDone ? "Analysis complete" : "Qwen AI analysing..."}
+                        </span>
+                        <span className="text-xs text-primary font-mono">{Math.round(mapBarPct)}%</span>
+                      </div>
+                    </div>
                   )}
                 </motion.div>
               );

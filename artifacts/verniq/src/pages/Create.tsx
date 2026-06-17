@@ -24,7 +24,7 @@ const PLATFORMS: {
 
 export default function Create() {
   const [, setLocation] = useLocation();
-  const { data: profile, isLoading: profileLoading } = useGetMyProfile();
+  const { data: profile, isLoading: profileLoading, isFetching: profileFetching } = useGetMyProfile();
 
   const [idea, setIdea] = useState("");
   const [platform, setPlatform] = useState<ContentPlatform>("tiktok");
@@ -40,7 +40,10 @@ export default function Create() {
   const generateContent = useGenerateContent();
   const createDraft = useCreateDraft();
 
-  if (profileLoading) return <div className="p-8 text-center text-muted-foreground font-mono">Loading...</div>;
+  // Wait for BOTH initial load AND any background refetch before checking voice_dna.
+  // Without isFetching, stale cached profile (no voice_dna yet) causes an immediate
+  // redirect back to /onboarding right after the user just saved their Voice DNA.
+  if (profileLoading || profileFetching) return <div className="p-8 text-center text-muted-foreground font-mono">Loading...</div>;
   if (profile && !profile.voice_dna) {
     setLocation("/onboarding");
     return null;
@@ -134,36 +137,97 @@ export default function Create() {
   // ── WORKFLOW ANIMATION ────────────────────────────────────────────────────
   if (workflowStep !== null) {
     const selectedPlatform = PLATFORMS.find((p) => p.id === platform);
+    const isWriting = generateContent.isPending;
     return (
-      <div className="container mx-auto px-4 py-24 flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <span className="text-4xl block mb-3">{selectedPlatform?.icon}</span>
-            <h2 className="text-2xl font-sans font-black mb-1 text-primary">Generating {selectedPlatform?.label} content</h2>
-            <p className="text-xs font-mono text-muted-foreground">Qwen AI · Voice DNA matched · {selectedPlatform?.format}</p>
+      <div className="min-h-screen flex flex-col px-4 py-8 max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-7 h-7 bg-primary flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-black text-primary-foreground">V</span>
           </div>
-          <div className="space-y-3">
-            {WORKFLOW_STEPS.map((step, idx) => (
-              <motion.div
-                key={step}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: workflowStep >= idx ? 1 : 0.15, y: 0, scale: workflowStep === idx ? 1.02 : 1 }}
-                className={`p-4 border font-mono text-sm flex items-center gap-3 transition-colors ${
-                  workflowStep === idx ? "border-primary bg-primary/10 text-primary"
-                  : workflowStep > idx ? "border-border bg-card text-foreground"
-                  : "border-border bg-card text-muted-foreground"
-                }`}
-              >
-                {workflowStep === idx && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />}
-                {workflowStep > idx && <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />}
-                {workflowStep < idx && <span className="w-4 h-4 flex-shrink-0" />}
-                {step}
-              </motion.div>
-            ))}
+          <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
+            Verniq AI Brain
+          </span>
+          <span className="text-xs font-mono text-muted-foreground ml-auto">
+            {selectedPlatform?.icon} {selectedPlatform?.label} · {selectedPlatform?.format}
+          </span>
+        </div>
+
+        {/* Terminal panel */}
+        <div className="border border-border bg-card">
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-background/60">
+            <div className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+            <span className="text-xs font-mono text-muted-foreground ml-2">content-generation</span>
           </div>
-          {generateContent.isPending && (
-            <p className="text-center text-xs font-mono text-primary mt-6 animate-pulse">Qwen AI writing in your voice...</p>
-          )}
+
+          <div className="p-5 space-y-1 font-mono text-sm">
+            {WORKFLOW_STEPS.map((step, idx) => {
+              const isDone = workflowStep > idx;
+              const isActive = workflowStep === idx;
+              if (!isDone && !isActive) return null;
+              return (
+                <motion.div
+                  key={step}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex items-center gap-3 py-1"
+                >
+                  {isDone ? (
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  ) : (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full flex-shrink-0"
+                    />
+                  )}
+                  <span className={isDone ? "text-muted-foreground" : "text-foreground"}>{step}</span>
+                  {isDone && <span className="text-green-500 text-xs ml-auto">done</span>}
+                </motion.div>
+              );
+            })}
+
+            {/* "Qwen AI is writing" — appears after all steps complete */}
+            {isWriting && (
+              <>
+                <div className="border-t border-border/50 my-3" />
+                <motion.div
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center gap-3 py-1"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                    className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full flex-shrink-0"
+                  />
+                  <span className="text-primary font-bold">Qwen AI is writing in your voice...</span>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                  className="text-xs text-muted-foreground pl-7 pb-1"
+                >
+                  Matching your tone · applying Voice DNA · crafting {selectedPlatform?.label} format
+                </motion.div>
+                {/* Progress bar */}
+                <div className="pl-7 pt-1 pb-2">
+                  <div className="h-0.5 bg-border overflow-hidden w-full">
+                    <motion.div
+                      className="h-full bg-primary"
+                      initial={{ width: "0%" }}
+                      animate={{ width: "90%" }}
+                      transition={{ duration: 40, ease: "linear" }}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
