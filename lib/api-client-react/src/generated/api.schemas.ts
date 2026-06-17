@@ -90,3 +90,12 @@ export interface TranscribeResult {
   transcript: string;
 }
 
+export interface GenerateInput {
+  idea: string;
+}
+
+export interface GenerateResult {
+  tiktok: string;
+  twitter: string[];
+}
+

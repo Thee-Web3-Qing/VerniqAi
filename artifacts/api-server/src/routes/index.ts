@@ -4,6 +4,7 @@ import profileRouter from "./profile";
 import draftsRouter from "./drafts";
 import creatorsRouter from "./creators";
 import transcribeRouter from "./transcribe";
+import generateRouter from "./generate";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(profileRouter);
 router.use(draftsRouter);
 router.use(creatorsRouter);
 router.use(transcribeRouter);
+router.use(generateRouter);
 
 export default router;

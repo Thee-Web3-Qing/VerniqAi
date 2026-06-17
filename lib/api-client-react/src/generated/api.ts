@@ -22,6 +22,8 @@ import type {
 import type {
   Draft,
   DraftInput,
+  GenerateInput,
+  GenerateResult,
   HealthStatus,
   Profile,
   ProfileUpdate,
@@ -785,4 +787,50 @@ export const useTranscribeAudio = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getTranscribeAudioMutationOptions(options));
     }
+
+// ---------------------------------------------------------------------------
+// Generate content (Qwen AI)
+// ---------------------------------------------------------------------------
+
+export const generateContent = async (
+  data: GenerateInput,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<GenerateResult> => {
+  return customFetch<GenerateResult>(`/api/generate`, {
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const getGenerateContentMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof generateContent>>, TError, { data: BodyType<GenerateInput> }, TContext>, request?: SecondParameter<typeof customFetch> }
+): UseMutationOptions<Awaited<ReturnType<typeof generateContent>>, TError, { data: BodyType<GenerateInput> }, TContext> => {
+  const mutationKey = ['generateContent'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateContent>>, { data: BodyType<GenerateInput> }> = (props) => {
+    const { data } = props ?? {};
+    return generateContent(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateContentMutationResult = NonNullable<Awaited<ReturnType<typeof generateContent>>>;
+export type GenerateContentMutationBody = BodyType<GenerateInput>;
+export type GenerateContentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate TikTok script + Twitter thread with Qwen AI
+ */
+export const useGenerateContent = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof generateContent>>, TError, { data: BodyType<GenerateInput> }, TContext>, request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof generateContent>>, TError, { data: BodyType<GenerateInput> }, TContext> => {
+  return useMutation(getGenerateContentMutationOptions(options));
+};
 
