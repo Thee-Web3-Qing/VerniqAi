@@ -113,7 +113,7 @@ Return ONLY valid JSON in this exact format:
 
   try {
     const response = await fetch(
-      "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+      "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/chat/completions",
       {
         method: "POST",
         headers: {
