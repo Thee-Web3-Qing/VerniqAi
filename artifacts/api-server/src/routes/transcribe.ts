@@ -43,8 +43,10 @@ router.post("/transcribe", requireAuth, async (req, res) => {
       return;
     }
 
-    const data = (await response.json()) as { transcript?: string };
-    res.json({ transcript: data.transcript ?? "" });
+    const data = (await response.json()) as Record<string, unknown>;
+    console.log("Sarvam v2.5 response shape:", JSON.stringify(data));
+    const transcript = (data.transcript ?? data.text ?? data.transcription ?? "") as string;
+    res.json({ transcript });
   } catch (err) {
     console.error("Transcription error:", err);
     res.status(500).json({ error: "Transcription failed" });
