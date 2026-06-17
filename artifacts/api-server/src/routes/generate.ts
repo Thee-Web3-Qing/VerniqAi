@@ -120,9 +120,10 @@ const PLATFORM_INSTRUCTIONS: Record<Platform, { name: string; format: string; in
 
 router.post("/generate", requireAuth, async (req, res) => {
   const { userId } = getAuth(req);
-  const { idea, platform = "tiktok" } = req.body as {
+  const { idea, platform = "tiktok", creatorId } = req.body as {
     idea?: string;
     platform?: Platform;
+    creatorId?: string;
   };
 
   if (!idea?.trim()) {
@@ -138,9 +139,35 @@ router.post("/generate", requireAuth, async (req, res) => {
 
   const platformInfo = PLATFORM_INSTRUCTIONS[platform] ?? PLATFORM_INSTRUCTIONS.tiktok;
 
-  const rows = await db.select().from(profilesTable).where(eq(profilesTable.id, userId!));
-  const profile = rows[0];
-  const dna = profile?.voiceDna as VoiceDNA | null;
+  let dna: VoiceDNA | null = null;
+  let paymentInfo: { walletAddress: string; priceUsd: number; creatorName: string; creatorId: string } | null = null;
+
+  if (creatorId) {
+    const creatorRows = await db.select().from(profilesTable).where(eq(profilesTable.id, creatorId));
+    if (creatorRows.length === 0 || !creatorRows[0].isPublicCreator) {
+      res.status(404).json({ error: "Creator not found" });
+      return;
+    }
+    const creator = creatorRows[0];
+    dna = creator.voiceDna as VoiceDNA | null;
+
+    await db
+      .update(profilesTable)
+      .set({ totalGenerationsSold: creator.totalGenerationsSold + 1 })
+      .where(eq(profilesTable.id, creatorId));
+
+    if (creator.walletAddress && creator.pricePerGeneration > 0) {
+      paymentInfo = {
+        walletAddress: creator.walletAddress,
+        priceUsd: creator.pricePerGeneration / 100,
+        creatorName: creator.displayName || "Anonymous Creator",
+        creatorId: creator.id,
+      };
+    }
+  } else {
+    const rows = await db.select().from(profilesTable).where(eq(profilesTable.id, userId!));
+    dna = rows[0]?.voiceDna as VoiceDNA | null;
+  }
 
   const dnaContext = dna
     ? `CREATOR'S VOICE DNA:
@@ -226,12 +253,11 @@ ${
       return;
     }
 
-    // Keep backwards-compat fields alongside new ones
     res.json({
       platform: parsed.platform ?? platform,
       output: parsed.output ?? "",
       parts: Array.isArray(parsed.parts) ? parsed.parts : null,
-      // legacy
+      payment: paymentInfo ?? null,
       tiktok: parsed.output ?? "",
       twitter: Array.isArray(parsed.parts) ? parsed.parts : null,
     });

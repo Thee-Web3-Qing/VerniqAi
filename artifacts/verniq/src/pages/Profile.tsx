@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useGetMyProfile, useUpdateMyProfile } from "@workspace/api-client-react";
+import type { SocialConnection, SocialPlatformId } from "@workspace/api-client-react";
 import { useClerk } from "@clerk/react";
-import { Brain, Edit3, Globe, Clock, Zap, MessageSquare, Mic } from "lucide-react";
+import { Brain, Edit3, Globe, Clock, Zap, MessageSquare, Mic, DollarSign, CheckCircle2 } from "lucide-react";
 
 function VoiceBar({ label, value, max = 10 }: { label: string; value: number; max?: number }) {
   const pct = Math.round((value / max) * 100);
@@ -25,6 +26,15 @@ function Tag({ text }: { text: string }) {
   );
 }
 
+const SOCIAL_PLATFORMS: { id: SocialPlatformId; label: string; icon: string }[] = [
+  { id: "tiktok", label: "TikTok", icon: "📱" },
+  { id: "twitter", label: "Twitter / X", icon: "𝕏" },
+  { id: "instagram", label: "Instagram", icon: "📸" },
+  { id: "youtube", label: "YouTube", icon: "▶" },
+  { id: "linkedin", label: "LinkedIn", icon: "💼" },
+  { id: "podcast", label: "Podcast", icon: "🎙" },
+];
+
 export default function Profile() {
   const { data: profile, isLoading } = useGetMyProfile();
   const updateProfile = useUpdateMyProfile();
@@ -38,12 +48,20 @@ export default function Profile() {
   const [isPublic, setIsPublic] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const [socialConns, setSocialConns] = useState<SocialConnection[]>([]);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [pricePerGen, setPricePerGen] = useState(50);
+  const [creatorSaved, setCreatorSaved] = useState(false);
+
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? "");
       setBio(profile.bio ?? "");
       setNiche(profile.niche ?? "");
       setIsPublic(profile.is_public_creator);
+      setSocialConns((profile.social_connections as SocialConnection[]) || []);
+      setWalletAddress(profile.wallet_address ?? "");
+      setPricePerGen(profile.price_per_generation || 50);
     }
   }, [profile]);
 
@@ -60,10 +78,42 @@ export default function Profile() {
     );
   };
 
+  const updateSocialConn = (platform: SocialPlatformId, field: "username" | "followerCount", value: string | number) => {
+    setSocialConns(prev => {
+      const exists = prev.find(c => c.platform === platform);
+      if (exists) {
+        return prev.map(c => c.platform === platform ? { ...c, [field]: value } : c);
+      }
+      const blank: SocialConnection = { platform, username: "", followerCount: 0 };
+      return [...prev, { ...blank, [field]: value }];
+    });
+  };
+
+  const handleCreatorSave = () => {
+    const filteredSocials = socialConns.filter(c => c.username.trim() || c.followerCount > 0);
+    updateProfile.mutate(
+      {
+        data: {
+          social_connections: filteredSocials,
+          wallet_address: walletAddress.trim() || null,
+          price_per_generation: pricePerGen,
+          is_public_creator: isPublic,
+        },
+      },
+      {
+        onSuccess: () => {
+          setCreatorSaved(true);
+          setTimeout(() => setCreatorSaved(false), 2500);
+        },
+      }
+    );
+  };
+
   if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono">Loading profile...</div>;
 
   const dna = profile?.voice_dna;
   const initials = (displayName || "U").slice(0, 2).toUpperCase();
+  const creatorEligible = socialConns.some(c => c.followerCount >= 5000);
 
   return (
     <div className="container mx-auto px-4 md:px-8 py-12 max-w-4xl">
@@ -135,15 +185,6 @@ export default function Profile() {
                   className="w-full bg-background border border-border p-3 text-sm focus:outline-none focus:border-primary rounded-none"
                 />
               </div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <div
-                  onClick={() => setIsPublic(!isPublic)}
-                  className={`w-10 h-5 relative transition-colors ${isPublic ? "bg-primary" : "bg-border"}`}
-                >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white transition-transform ${isPublic ? "translate-x-5" : "translate-x-0.5"}`} />
-                </div>
-                <span className="text-sm font-bold">List in Creator Marketplace</span>
-              </label>
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={handleSave}
@@ -217,10 +258,7 @@ export default function Profile() {
 
             {dna ? (
               <div className="p-5 space-y-6">
-                {/* Summary */}
                 <p className="text-sm italic text-muted-foreground leading-relaxed">"{dna.summary}"</p>
-
-                {/* Bars */}
                 <div className="space-y-3">
                   <VoiceBar label="Formality" value={dna.formalityScore} max={10} />
                   <VoiceBar
@@ -229,8 +267,6 @@ export default function Profile() {
                     max={10}
                   />
                 </div>
-
-                {/* Traits grid */}
                 <div className="grid grid-cols-1 gap-2 text-sm font-mono">
                   {[
                     { label: "Tone", value: dna.tone },
@@ -248,8 +284,6 @@ export default function Profile() {
                     </div>
                   ))}
                 </div>
-
-                {/* Signature phrases */}
                 {dna.signaturePhrases.length > 0 && (
                   <div>
                     <div className="flex items-center gap-1.5 mb-2">
@@ -263,7 +297,6 @@ export default function Profile() {
                     </div>
                   </div>
                 )}
-
                 <div className="text-xs font-mono text-muted-foreground pt-2 border-t border-border">
                   Last trained {new Date(dna.lastUpdated).toLocaleDateString()}
                 </div>
@@ -280,6 +313,143 @@ export default function Profile() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Creator Studio */}
+      <div className="mt-10 border border-border bg-card">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
+          <DollarSign className="w-4 h-4 text-primary" />
+          <h2 className="text-sm font-black font-sans text-primary uppercase tracking-wider">Creator Studio</h2>
+          {creatorEligible && (
+            <span className="text-xs font-mono font-bold text-green-500 border border-green-500/30 bg-green-500/10 px-2 py-0.5">
+              ⭐ Creator Eligible
+            </span>
+          )}
+          {profile?.is_public_creator && (
+            <span className="text-xs font-mono text-primary border border-primary/30 bg-primary/10 px-2 py-0.5">
+              Listed
+            </span>
+          )}
+          {profile?.total_generations_sold > 0 && (
+            <span className="ml-auto text-xs font-mono text-muted-foreground">
+              {profile.total_generations_sold} generations sold
+            </span>
+          )}
+        </div>
+
+        <div className="p-6 space-y-6">
+          <p className="text-sm text-muted-foreground">
+            Connect your socials to verify 5,000+ followers. Once eligible, set your wallet address and price per generation to earn from your Voice DNA.
+          </p>
+
+          {/* Social connections */}
+          <div className="space-y-3">
+            <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest">
+              Connected Socials
+            </label>
+            <div className="space-y-2">
+              {SOCIAL_PLATFORMS.map((sp) => {
+                const conn = socialConns.find(c => c.platform === sp.id);
+                return (
+                  <div key={sp.id} className="flex items-center gap-3">
+                    <span className="w-32 text-sm font-mono text-muted-foreground flex-shrink-0">
+                      {sp.icon} {sp.label}
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="@username"
+                      value={conn?.username || ""}
+                      onChange={(e) => updateSocialConn(sp.id, "username", e.target.value)}
+                      className="flex-1 bg-background border border-border p-2 text-sm focus:outline-none focus:border-primary rounded-none"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Followers"
+                      value={conn?.followerCount || ""}
+                      onChange={(e) => updateSocialConn(sp.id, "followerCount", Number(e.target.value))}
+                      className="w-32 bg-background border border-border p-2 text-sm focus:outline-none focus:border-primary rounded-none"
+                    />
+                    {(conn?.followerCount ?? 0) >= 5000 ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <div className="w-4 h-4 flex-shrink-0" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {!creatorEligible && (
+              <p className="text-xs font-mono text-muted-foreground border border-dashed border-border p-3">
+                Need at least one platform with 5,000+ followers to unlock wallet & pricing.
+              </p>
+            )}
+          </div>
+
+          {/* Wallet + Pricing — only if eligible */}
+          {creatorEligible && (
+            <div className="space-y-4 border-t border-border pt-6">
+              <div>
+                <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                  Wallet Address (any chain)
+                </label>
+                <input
+                  type="text"
+                  value={walletAddress}
+                  onChange={(e) => setWalletAddress(e.target.value)}
+                  placeholder="ETH / SOL / USDT TRC-20 / BTC address"
+                  className="w-full bg-background border border-border p-3 text-sm focus:outline-none focus:border-primary rounded-none font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                  Price per Generation (USD)
+                </label>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-mono text-muted-foreground">$</span>
+                  <input
+                    type="number"
+                    value={(pricePerGen / 100).toFixed(2)}
+                    onChange={(e) => {
+                      const val = Math.round(parseFloat(e.target.value || "0") * 100);
+                      setPricePerGen(Math.max(10, Math.min(1000, val)));
+                    }}
+                    step="0.10"
+                    min="0.10"
+                    max="10.00"
+                    className="w-36 bg-background border border-border p-3 text-sm focus:outline-none focus:border-primary rounded-none font-mono"
+                  />
+                  <span className="text-xs font-mono text-muted-foreground">per content piece</span>
+                </div>
+              </div>
+
+              {/* Marketplace toggle */}
+              <label className="flex items-start gap-3 cursor-pointer">
+                <div
+                  onClick={() => setIsPublic(!isPublic)}
+                  className={`w-10 h-5 relative transition-colors flex-shrink-0 mt-0.5 ${isPublic ? "bg-primary" : "bg-border"}`}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white transition-transform ${isPublic ? "translate-x-5" : "translate-x-0.5"}`} />
+                </div>
+                <div>
+                  <div className="text-sm font-bold">List in Creator Marketplace</div>
+                  <div className="text-xs text-muted-foreground font-mono">Buyers find and pay to use your Voice DNA</div>
+                </div>
+              </label>
+            </div>
+          )}
+
+          <div className="flex items-center gap-4 pt-2">
+            <button
+              onClick={handleCreatorSave}
+              disabled={updateProfile.isPending}
+              className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded-none hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {updateProfile.isPending ? "Saving..." : "Save Creator Settings →"}
+            </button>
+            {creatorSaved && <span className="text-sm text-green-500 font-mono">Saved ✓</span>}
           </div>
         </div>
       </div>

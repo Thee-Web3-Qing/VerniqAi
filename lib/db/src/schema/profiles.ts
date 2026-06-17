@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const profilesTable = pgTable("profiles", {
-  id: text("id").primaryKey(), // Clerk user ID
+  id: text("id").primaryKey(),
   displayName: text("display_name"),
   bio: text("bio"),
   niche: text("niche"),
@@ -11,6 +11,10 @@ export const profilesTable = pgTable("profiles", {
   isPublicCreator: boolean("is_public_creator").notNull().default(false),
   voiceDna: jsonb("voice_dna"),
   followerCount: integer("follower_count").notNull().default(0),
+  socialConnections: jsonb("social_connections").default([]),
+  walletAddress: text("wallet_address"),
+  pricePerGeneration: integer("price_per_generation").notNull().default(0),
+  totalGenerationsSold: integer("total_generations_sold").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -28,11 +28,25 @@ export interface VoiceDNA {
   source: VoiceDNASource;
   summary: string;
   lastUpdated: string;
-  // Extended fields from Qwen analysis
   emotions?: string;
   charisma?: string;
   pacing?: string;
   contentStyle?: string;
+}
+
+export type SocialPlatformId = 'tiktok' | 'twitter' | 'instagram' | 'youtube' | 'linkedin' | 'podcast';
+
+export interface SocialConnection {
+  platform: SocialPlatformId;
+  username: string;
+  followerCount: number;
+}
+
+export interface PaymentInfo {
+  walletAddress: string;
+  priceUsd: number;
+  creatorName: string;
+  creatorId: string;
 }
 
 export interface Profile {
@@ -48,6 +62,12 @@ export interface Profile {
   is_public_creator: boolean;
   voice_dna?: VoiceDNA | null;
   follower_count: number;
+  social_connections: SocialConnection[];
+  /** @nullable */
+  wallet_address?: string | null;
+  price_per_generation: number;
+  total_generations_sold: number;
+  creator_eligible: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +81,10 @@ export interface ProfileUpdate {
   niche?: string | null;
   is_public_creator?: boolean;
   voice_dna?: VoiceDNA | null;
+  social_connections?: SocialConnection[];
+  /** @nullable */
+  wallet_address?: string | null;
+  price_per_generation?: number;
 }
 
 export interface Draft {
@@ -109,12 +133,14 @@ export type ContentPlatform =
 export interface GenerateInput {
   idea: string;
   platform?: ContentPlatform;
+  creatorId?: string;
 }
 
 export interface GenerateResult {
   platform: ContentPlatform;
   output: string;
   parts: string[] | null;
+  payment?: PaymentInfo | null;
   /** @deprecated use output/parts */
   tiktok?: string;
   /** @deprecated use parts */

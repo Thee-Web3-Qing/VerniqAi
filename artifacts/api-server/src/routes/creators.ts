@@ -1,10 +1,18 @@
 import { Router } from "express";
 import { db, profilesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 
 const router = Router();
 
+function isCreatorEligible(socialConnections: unknown): boolean {
+  if (!Array.isArray(socialConnections)) return false;
+  return socialConnections.some(
+    (c: { followerCount?: number }) => typeof c.followerCount === "number" && c.followerCount >= 5000
+  );
+}
+
 function profileToDto(p: typeof profilesTable.$inferSelect) {
+  const socials = (p.socialConnections as unknown[]) ?? [];
   return {
     id: p.id,
     display_name: p.displayName ?? null,
@@ -14,6 +22,11 @@ function profileToDto(p: typeof profilesTable.$inferSelect) {
     is_public_creator: p.isPublicCreator,
     voice_dna: (p.voiceDna as Record<string, unknown> | null) ?? null,
     follower_count: p.followerCount,
+    social_connections: socials,
+    wallet_address: p.walletAddress ?? null,
+    price_per_generation: p.pricePerGeneration,
+    total_generations_sold: p.totalGenerationsSold,
+    creator_eligible: isCreatorEligible(socials),
     created_at: p.createdAt.toISOString(),
     updated_at: p.updatedAt.toISOString(),
   };
@@ -23,7 +36,7 @@ router.get("/creators", async (_req, res) => {
   const rows = await db
     .select()
     .from(profilesTable)
-    .where(eq(profilesTable.isPublicCreator, true));
+    .where(and(eq(profilesTable.isPublicCreator, true), isNotNull(profilesTable.voiceDna)));
   res.json(rows.map(profileToDto));
 });
 

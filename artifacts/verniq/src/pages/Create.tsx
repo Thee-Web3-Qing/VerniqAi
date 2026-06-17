@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useGetMyProfile, useTranscribeAudio, useGenerateContent, useCreateDraft } from "@workspace/api-client-react";
-import type { ContentPlatform, GenerateResult } from "@workspace/api-client-react";
+import { useGetMyProfile, useTranscribeAudio, useGenerateContent, useCreateDraft, useListCreators } from "@workspace/api-client-react";
+import type { ContentPlatform, GenerateResult, PaymentInfo, Profile } from "@workspace/api-client-react";
 import { WORKFLOW_STEPS, scoreVoiceMatch } from "../lib/verniq-store";
 import { motion } from "framer-motion";
-import { Mic, Loader2, CheckCircle } from "lucide-react";
+import { Mic, CheckCircle, CheckCircle2, X, Copy } from "lucide-react";
 
 const PLATFORMS: {
   id: ContentPlatform;
@@ -22,15 +22,29 @@ const PLATFORMS: {
   { id: "newsletter", label: "Newsletter", icon: "✉", format: "Email copy", description: "Subject + body + PS" },
 ];
 
+function truncateAddress(addr: string) {
+  if (addr.length <= 14) return addr;
+  return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+}
+
 export default function Create() {
   const [, setLocation] = useLocation();
   const { data: profile, isLoading: profileLoading, isFetching: profileFetching } = useGetMyProfile();
+  const { data: creators, isLoading: creatorsLoading } = useListCreators();
 
   const [idea, setIdea] = useState("");
   const [platform, setPlatform] = useState<ContentPlatform>("tiktok");
   const [isRecording, setIsRecording] = useState(false);
   const [workflowStep, setWorkflowStep] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [voiceMode, setVoiceMode] = useState<"my" | "creator">("my");
+  const [showCreatorPicker, setShowCreatorPicker] = useState(false);
+  const [selectedCreator, setSelectedCreator] = useState<Profile | null>(null);
+  const [paymentReminder, setPaymentReminder] = useState<{ payment: PaymentInfo; draftId: string } | null>(null);
+  const [copiedWallet, setCopiedWallet] = useState(false);
+
+  const pendingDraftRef = useRef<{ id: string; idea: string; platform: string; output: string; parts: string[] | null; voiceMatch: number } | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -40,11 +54,21 @@ export default function Create() {
   const generateContent = useGenerateContent();
   const createDraft = useCreateDraft();
 
-  // Wait for BOTH initial load AND any background refetch before checking voice_dna.
-  // Without isFetching, stale cached profile (no voice_dna yet) causes an immediate
-  // redirect back to /onboarding right after the user just saved their Voice DNA.
+  // Check if a creator was pre-selected from CreatorProfile page
+  useEffect(() => {
+    const stored = sessionStorage.getItem("verniq.selectedCreator");
+    if (stored) {
+      try {
+        const creator = JSON.parse(stored) as Profile;
+        setSelectedCreator(creator);
+        setVoiceMode("creator");
+        sessionStorage.removeItem("verniq.selectedCreator");
+      } catch { /* ignore */ }
+    }
+  }, []);
+
   if (profileLoading || profileFetching) return <div className="p-8 text-center text-muted-foreground font-mono">Loading...</div>;
-  if (profile && !profile.voice_dna) {
+  if (profile && !profile.voice_dna && voiceMode === "my") {
     setLocation("/onboarding");
     return null;
   }
@@ -90,8 +114,23 @@ export default function Create() {
     }
   };
 
+  const navigateToDraft = (draftId: string, data: { idea: string; platform: string; output: string; parts: string[] | null; voiceMatch: number }) => {
+    sessionStorage.setItem(`verniq.pending.${draftId}`, JSON.stringify(data));
+    setLocation(`/results/${draftId}`);
+  };
+
+  const handlePaymentAcknowledge = () => {
+    if (pendingDraftRef.current) {
+      const { id, ...rest } = pendingDraftRef.current;
+      navigateToDraft(id, rest);
+    }
+    setPaymentReminder(null);
+  };
+
   const handleGenerate = async () => {
-    if (!idea.trim() || !profile?.voice_dna) return;
+    if (!idea.trim()) return;
+    if (voiceMode === "my" && !profile?.voice_dna) return;
+    if (voiceMode === "creator" && !selectedCreator) return;
     setError(null);
 
     for (let i = 0; i < WORKFLOW_STEPS.length; i++) {
@@ -100,28 +139,45 @@ export default function Create() {
     }
     setWorkflowStep(WORKFLOW_STEPS.length);
 
+    const generatePayload = voiceMode === "creator" && selectedCreator
+      ? { idea, platform, creatorId: selectedCreator.id }
+      : { idea, platform };
+
     generateContent.mutate(
-      { data: { idea, platform } },
+      { data: generatePayload },
       {
         onSuccess: (result: GenerateResult) => {
-          const score = profile.voice_dna ? scoreVoiceMatch(profile.voice_dna) : 82;
+          const score = profile?.voice_dna ? scoreVoiceMatch(profile.voice_dna) : 82;
           createDraft.mutate(
             { data: { idea, tiktok: result.output, twitter: result.parts ?? null, voice_match: score } },
             {
               onSuccess: (draft) => {
-                sessionStorage.setItem(
-                  `verniq.pending.${draft.id}`,
-                  JSON.stringify({ idea, platform: result.platform, output: result.output, parts: result.parts, voiceMatch: score })
-                );
-                setLocation(`/results/${draft.id}`);
+                const draftData = {
+                  id: draft.id,
+                  idea,
+                  platform: result.platform,
+                  output: result.output,
+                  parts: result.parts,
+                  voiceMatch: score,
+                };
+                if (result.payment) {
+                  pendingDraftRef.current = draftData;
+                  setWorkflowStep(null);
+                  setPaymentReminder({ payment: result.payment, draftId: draft.id });
+                } else {
+                  navigateToDraft(draft.id, draftData);
+                }
               },
               onError: () => {
                 const id = crypto.randomUUID();
-                sessionStorage.setItem(
-                  `verniq.pending.${id}`,
-                  JSON.stringify({ idea, platform: result.platform, output: result.output, parts: result.parts, voiceMatch: score })
-                );
-                setLocation(`/results/${id}`);
+                const draftData = { id, idea, platform: result.platform, output: result.output, parts: result.parts, voiceMatch: score };
+                if (result.payment) {
+                  pendingDraftRef.current = draftData;
+                  setWorkflowStep(null);
+                  setPaymentReminder({ payment: result.payment, draftId: id });
+                } else {
+                  navigateToDraft(id, draftData);
+                }
               },
             }
           );
@@ -134,13 +190,73 @@ export default function Create() {
     );
   };
 
+  // ── PAYMENT REMINDER MODAL ────────────────────────────────────────────────
+  if (paymentReminder) {
+    const { payment } = paymentReminder;
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <div className="bg-card border border-primary max-w-md w-full">
+          <div className="px-8 py-6 border-b border-border">
+            <div className="flex items-center gap-3 mb-1">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <h2 className="text-xl font-black font-sans">Content Generated!</h2>
+            </div>
+            <p className="text-sm text-muted-foreground font-mono">
+              You used {payment.creatorName}'s Voice DNA.
+            </p>
+          </div>
+
+          <div className="p-8 space-y-6">
+            <div className="border border-border bg-background p-5 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Amount owed</span>
+                <span className="text-2xl font-black font-sans text-primary">${payment.priceUsd.toFixed(2)}</span>
+              </div>
+              <div className="border-t border-border pt-4 space-y-2">
+                <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Payment wallet</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-foreground flex-1 truncate">{truncateAddress(payment.walletAddress)}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(payment.walletAddress);
+                      setCopiedWallet(true);
+                      setTimeout(() => setCopiedWallet(false), 2000);
+                    }}
+                    className="p-1.5 border border-border hover:border-primary transition-colors"
+                  >
+                    {copiedWallet ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                  </button>
+                </div>
+                {copiedWallet && <p className="text-xs font-mono text-green-500">Copied!</p>}
+              </div>
+            </div>
+
+            <p className="text-xs font-mono text-muted-foreground text-center">
+              Send ${payment.priceUsd.toFixed(2)} USD equivalent to the address above. Payments are on an honor system — always support the creators you use.
+            </p>
+
+            <button
+              onClick={handlePaymentAcknowledge}
+              className="w-full py-4 bg-primary text-primary-foreground font-bold rounded-none text-sm hover:bg-primary/90 transition-colors"
+            >
+              I'll send the payment → View my content
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── WORKFLOW ANIMATION ────────────────────────────────────────────────────
   if (workflowStep !== null) {
     const selectedPlatform = PLATFORMS.find((p) => p.id === platform);
     const isWriting = generateContent.isPending;
     return (
       <div className="min-h-screen flex flex-col px-4 py-8 max-w-2xl mx-auto">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-7 h-7 bg-primary flex items-center justify-center flex-shrink-0">
             <span className="text-xs font-black text-primary-foreground">V</span>
@@ -148,12 +264,16 @@ export default function Create() {
           <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
             Verniq AI Brain
           </span>
+          {voiceMode === "creator" && selectedCreator && (
+            <span className="text-xs font-mono text-muted-foreground">
+              Using {selectedCreator.display_name}'s voice
+            </span>
+          )}
           <span className="text-xs font-mono text-muted-foreground ml-auto">
             {selectedPlatform?.icon} {selectedPlatform?.label} · {selectedPlatform?.format}
           </span>
         </div>
 
-        {/* Terminal panel */}
         <div className="border border-border bg-card">
           <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-background/60">
             <div className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
@@ -190,7 +310,6 @@ export default function Create() {
               );
             })}
 
-            {/* "Qwen AI is writing" — appears after all steps complete */}
             {isWriting && (
               <>
                 <div className="border-t border-border/50 my-3" />
@@ -204,7 +323,11 @@ export default function Create() {
                     transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
                     className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full flex-shrink-0"
                   />
-                  <span className="text-primary font-bold">Qwen AI is writing in your voice...</span>
+                  <span className="text-primary font-bold">
+                    {voiceMode === "creator" && selectedCreator
+                      ? `Writing in ${selectedCreator.display_name}'s voice...`
+                      : "Qwen AI is writing in your voice..."}
+                  </span>
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -212,9 +335,8 @@ export default function Create() {
                   transition={{ repeat: Infinity, duration: 2 }}
                   className="text-xs text-muted-foreground pl-7 pb-1"
                 >
-                  Matching your tone · applying Voice DNA · crafting {selectedPlatform?.label} format
+                  Matching tone · applying Voice DNA · crafting {selectedPlatform?.label} format
                 </motion.div>
-                {/* Progress bar */}
                 <div className="pl-7 pt-1 pb-2">
                   <div className="h-0.5 bg-border overflow-hidden w-full">
                     <motion.div
@@ -242,6 +364,119 @@ export default function Create() {
           Pick a platform · Drop your idea · Qwen AI repurposes it in your voice.
         </p>
       </header>
+
+      {/* Voice Source selector */}
+      <div className="mb-8">
+        <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-3">
+          Voice Source
+        </label>
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => { setVoiceMode("my"); setSelectedCreator(null); setShowCreatorPicker(false); }}
+            className={`px-4 py-2.5 border text-sm font-bold rounded-none transition-all ${
+              voiceMode === "my" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50"
+            }`}
+          >
+            My Voice DNA
+          </button>
+          <button
+            onClick={() => { setVoiceMode("creator"); setShowCreatorPicker(true); }}
+            className={`px-4 py-2.5 border text-sm font-bold rounded-none transition-all ${
+              voiceMode === "creator" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50"
+            }`}
+          >
+            {selectedCreator ? `${selectedCreator.display_name || "Creator"}'s Voice` : "Borrow a Creator Voice"}
+          </button>
+        </div>
+
+        {/* Creator picker dropdown */}
+        {voiceMode === "creator" && showCreatorPicker && (
+          <div className="border border-border bg-card">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <span className="text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest">Select a Creator</span>
+              <button onClick={() => setShowCreatorPicker(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
+              {creatorsLoading ? (
+                <div className="text-xs font-mono text-muted-foreground p-3">Loading creators...</div>
+              ) : creators && creators.length > 0 ? (
+                creators.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => { setSelectedCreator(c as unknown as Profile); setShowCreatorPicker(false); }}
+                    className={`w-full flex items-center gap-3 p-3 border text-left rounded-none transition-all ${
+                      selectedCreator?.id === c.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="w-9 h-9 bg-gradient-to-br from-primary/20 to-secondary border border-border flex-shrink-0 overflow-hidden flex items-center justify-center">
+                      {c.avatar_url ? (
+                        <img src={c.avatar_url} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <span className="text-sm font-black text-primary">
+                          {(c.display_name || "?").slice(0, 2).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold truncate">{c.display_name || "Anonymous Creator"}</div>
+                      <div className="text-xs font-mono text-muted-foreground">{c.niche || "Creator"}</div>
+                    </div>
+                    {c.price_per_generation > 0 ? (
+                      <span className="text-xs font-mono font-bold text-primary border border-primary/30 bg-primary/10 px-2 py-0.5 flex-shrink-0">
+                        ${(c.price_per_generation / 100).toFixed(2)}/gen
+                      </span>
+                    ) : (
+                      <span className="text-xs font-mono text-green-500 border border-green-500/30 bg-green-500/10 px-2 py-0.5 flex-shrink-0">
+                        Free
+                      </span>
+                    )}
+                  </button>
+                ))
+              ) : (
+                <div className="text-xs font-mono text-muted-foreground p-3">No public creators available yet.</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Selected creator chip */}
+        {voiceMode === "creator" && selectedCreator && !showCreatorPicker && (
+          <div className="flex items-center gap-3 px-4 py-3 border border-primary/30 bg-primary/5">
+            <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+            <div className="flex-1 text-sm font-mono">
+              <span className="text-primary font-bold">{selectedCreator.display_name}'s voice</span>
+              {(selectedCreator.price_per_generation ?? 0) > 0 && (
+                <span className="text-muted-foreground ml-2">
+                  · ${((selectedCreator.price_per_generation ?? 0) / 100).toFixed(2)} will be owed after generation
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowCreatorPicker(true)}
+              className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Change
+            </button>
+            <button
+              onClick={() => { setSelectedCreator(null); setVoiceMode("my"); }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {voiceMode === "creator" && !selectedCreator && !showCreatorPicker && (
+          <button
+            onClick={() => setShowCreatorPicker(true)}
+            className="text-xs font-mono text-primary hover:underline"
+          >
+            Select a creator →
+          </button>
+        )}
+      </div>
 
       {/* Platform selector */}
       <div className="mb-8">
@@ -306,10 +541,14 @@ export default function Create() {
         </div>
       </div>
 
-      {/* Voice DNA status + generate */}
+      {/* Voice status + generate button */}
       <div className="flex items-start justify-between gap-4">
         <div className="text-xs font-mono text-muted-foreground pt-1">
-          {profile?.voice_dna ? (
+          {voiceMode === "creator" && selectedCreator ? (
+            <span className="text-primary">
+              ✓ Using {selectedCreator.display_name}'s Voice DNA
+            </span>
+          ) : profile?.voice_dna ? (
             <span className="text-primary">✓ {profile.voice_dna.summary}</span>
           ) : (
             <span>No Voice DNA</span>
@@ -317,7 +556,12 @@ export default function Create() {
         </div>
         <button
           onClick={handleGenerate}
-          disabled={!idea.trim() || generateContent.isPending}
+          disabled={
+            !idea.trim() ||
+            generateContent.isPending ||
+            (voiceMode === "my" && !profile?.voice_dna) ||
+            (voiceMode === "creator" && !selectedCreator)
+          }
           className="px-8 py-4 bg-primary text-primary-foreground font-bold rounded-none text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 shadow-lg shadow-primary/20 flex-shrink-0"
         >
           Generate with AI →
