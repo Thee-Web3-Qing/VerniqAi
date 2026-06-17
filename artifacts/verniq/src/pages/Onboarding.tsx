@@ -1,12 +1,19 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useUpdateMyProfile, useTranscribeAudio, useAnalyseVoice } from "@workspace/api-client-react";
 import type { AnalysisStep, VoiceDNA } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, CheckCircle, Brain, Sparkles } from "lucide-react";
+import { Mic, MicOff, CheckCircle, Sparkles } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
 type Stage = "input" | "analysing" | "review" | "saving";
+
+const PRE_STEPS = [
+  { id: "connect", emoji: "⚡", label: "Connecting to Qwen AI" },
+  { id: "read",    emoji: "📖", label: "Reading content patterns" },
+  { id: "scan",    emoji: "🔍", label: "Scanning voice signature" },
+  { id: "map",     emoji: "🧠", label: "Mapping 8 dimensions" },
+];
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
@@ -18,10 +25,14 @@ export default function Onboarding() {
   const [audioDuration, setAudioDuration] = useState(0);
 
   const [stage, setStage] = useState<Stage>("input");
+  const [activePreStep, setActivePreStep] = useState(0);
+  const [donePreSteps, setDonePreSteps] = useState<Set<string>>(new Set());
   const [visibleSteps, setVisibleSteps] = useState<AnalysisStep[]>([]);
+  const [activeStepIdx, setActiveStepIdx] = useState<number | null>(null);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
   const [voiceDna, setVoiceDna] = useState<VoiceDNA | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [showDna, setShowDna] = useState(false);
 
   const updateProfile = useUpdateMyProfile();
   const transcribeAudio = useTranscribeAudio();
@@ -30,6 +41,23 @@ export default function Onboarding() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
+
+  // Animate pre-steps while in "analysing" stage
+  useEffect(() => {
+    if (stage !== "analysing") return;
+    let idx = 0;
+    setActivePreStep(0);
+    const interval = setInterval(() => {
+      idx += 1;
+      if (idx < PRE_STEPS.length) {
+        setDonePreSteps((prev) => new Set([...prev, PRE_STEPS[idx - 1].id]));
+        setActivePreStep(idx);
+      } else {
+        clearInterval(interval);
+      }
+    }, 800);
+    return () => clearInterval(interval);
+  }, [stage]);
 
   const startRecording = async () => {
     try {
@@ -86,29 +114,43 @@ export default function Onboarding() {
     if (!textToAnalyse.trim()) return;
     setStage("analysing");
     setVisibleSteps([]);
+    setAnalysisSteps([]);
+    setVoiceDna(null);
+    setShowDna(false);
+    setDonePreSteps(new Set());
+    setActivePreStep(0);
+    setActiveStepIdx(null);
     setAnalysisError(null);
 
     analyseVoiceMutation.mutate(
-      {
-        data: {
-          text: textToAnalyse,
-          audioDurationSeconds: mode === "video" ? audioDuration : undefined,
-        },
-      },
+      { data: { text: textToAnalyse, audioDurationSeconds: mode === "video" ? audioDuration : undefined } },
       {
         onSuccess: async (result) => {
-          setAnalysisSteps(result.steps);
+          // Complete all pre-steps instantly
+          setDonePreSteps(new Set(PRE_STEPS.map((s) => s.id)));
+          setActivePreStep(-1);
+          setAnalysisSteps(result.steps as AnalysisStep[]);
           setVoiceDna(result.voiceDna as VoiceDNA);
           setStage("review");
+
+          // Reveal each step one by one
           for (let i = 0; i < result.steps.length; i++) {
-            await new Promise((r) => setTimeout(r, 550));
+            setActiveStepIdx(i);
+            await new Promise((r) => setTimeout(r, 120));
             setVisibleSteps((prev) => [...prev, result.steps[i] as AnalysisStep]);
+            await new Promise((r) => setTimeout(r, 380));
           }
+          setActiveStepIdx(null);
+
+          // Show DNA card
+          await new Promise((r) => setTimeout(r, 300));
+          setShowDna(true);
         },
         onError: (err) => {
           console.error("Analysis error:", err);
           setAnalysisError("Analysis failed. Please try again.");
           setStage("input");
+          setDonePreSteps(new Set());
         },
       }
     );
@@ -131,80 +173,160 @@ export default function Onboarding() {
     );
   };
 
-  // ── ANALYSING STAGE ──────────────────────────────────────────────────────
-  if (stage === "analysing") {
+  // ── ANALYSING / REVIEW STAGE — live log panel ─────────────────────────────
+  if (stage === "analysing" || stage === "review" || stage === "saving") {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="w-full max-w-md text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-            className="w-16 h-16 border-4 border-primary border-t-transparent mx-auto mb-6"
-          />
-          <h2 className="text-2xl font-black font-sans mb-2 text-primary">Verniq is reading your voice...</h2>
-          <p className="text-sm font-mono text-muted-foreground">Connecting to Qwen AI · Scanning patterns · Mapping signature</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── REVIEW STAGE ─────────────────────────────────────────────────────────
-  if (stage === "review" || stage === "saving") {
-    return (
-      <div className="container mx-auto px-4 md:px-8 py-10 max-w-2xl">
-        <div className="flex items-center gap-3 mb-8">
-          <Brain className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-black font-sans text-primary">Verniq · Voice Analysis</h1>
+      <div className="min-h-screen flex flex-col px-4 py-8 max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-7 h-7 bg-primary flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-black text-primary-foreground">V</span>
+          </div>
+          <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
+            Verniq AI Brain
+          </span>
+          <span className="text-xs font-mono text-muted-foreground ml-auto">
+            {visibleSteps.length}/{analysisSteps.length || 8} dimensions
+          </span>
         </div>
 
-        <p className="text-sm font-mono text-muted-foreground mb-8">
-          Qwen AI has mapped {analysisSteps.length} dimensions of your voice. Review before locking it in.
-        </p>
+        {/* Terminal panel */}
+        <div className="border border-border bg-card flex-1 overflow-hidden">
+          {/* Terminal title bar */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-background/60">
+            <div className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+            <span className="text-xs font-mono text-muted-foreground ml-2">voice-dna-analysis</span>
+          </div>
 
-        {/* Analysis steps */}
-        <div className="space-y-3 mb-10">
-          <AnimatePresence>
-            {visibleSteps.map((step, i) => (
+          <div className="p-5 space-y-1 font-mono text-sm">
+            {/* Pre-steps */}
+            {PRE_STEPS.map((step, i) => {
+              const isDone = donePreSteps.has(step.id);
+              const isActive = activePreStep === i && stage === "analysing";
+              const isVisible = isDone || isActive || i < activePreStep;
+
+              if (!isVisible) return null;
+
+              return (
+                <motion.div
+                  key={step.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex items-center gap-3 py-1"
+                >
+                  {isDone ? (
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  ) : (
+                    <SpinnerIcon />
+                  )}
+                  <span className={isDone ? "text-muted-foreground" : "text-foreground"}>
+                    {step.emoji} {step.label}
+                  </span>
+                  {isDone && (
+                    <span className="text-green-500 text-xs ml-auto">done</span>
+                  )}
+                </motion.div>
+              );
+            })}
+
+            {/* Separator after pre-steps complete */}
+            {(stage === "review" || stage === "saving") && (
               <motion.div
-                key={step.category}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4 }}
-                className="border border-border bg-card p-4 flex gap-4"
-              >
-                <span className="text-2xl flex-shrink-0 w-8 text-center">{step.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">{step.category}</span>
-                    <span className="text-sm font-bold text-primary text-right flex-shrink-0">{step.value}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{step.reasoning}</p>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="border-t border-border/50 my-3"
+              />
+            )}
 
-          {/* Loading placeholders */}
-          {Array.from({ length: Math.max(0, (analysisSteps.length || 8) - visibleSteps.length) }).map((_, i) => (
-            <div key={`placeholder-${i}`} className="border border-border/30 bg-card/30 p-4 h-16 animate-pulse" />
-          ))}
+            {/* Actual dimension steps */}
+            <AnimatePresence>
+              {visibleSteps.map((step, i) => (
+                <motion.div
+                  key={step.category}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="py-1.5"
+                >
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-muted-foreground text-xs uppercase tracking-widest">
+                          {step.emoji} {step.category}
+                        </span>
+                        <span className="text-primary font-bold text-xs text-right">
+                          {step.value}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5 leading-relaxed">
+                        {step.reasoning}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* Currently analysing step */}
+            {activeStepIdx !== null && (
+              <motion.div
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-3 py-1.5"
+              >
+                <SpinnerIcon />
+                <span className="text-foreground text-xs">
+                  {analysisSteps[activeStepIdx]?.emoji}{" "}
+                  Analysing {analysisSteps[activeStepIdx]?.category}...
+                </span>
+              </motion.div>
+            )}
+
+            {/* Blinking cursor while loading */}
+            {stage === "analysing" && activeStepIdx === null && (
+              <div className="flex items-center gap-3 py-1">
+                <SpinnerIcon />
+                <span className="text-muted-foreground text-xs">Processing...</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Voice DNA summary card — shown only after all steps revealed */}
+        {/* Completion banner + DNA card */}
         <AnimatePresence>
-          {visibleSteps.length === analysisSteps.length && voiceDna && (
+          {showDna && voiceDna && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ duration: 0.5 }}
+              className="mt-4 space-y-4"
             >
-              <div className="border-2 border-primary bg-primary/5 p-6 mb-8">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <h2 className="text-lg font-black font-sans text-primary">Voice DNA Signature</h2>
+              {/* Pipeline complete banner */}
+              <div className="border border-primary bg-primary/5 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-mono font-bold text-primary uppercase tracking-wider">
+                    Analysis complete · {visibleSteps.length} dimensions mapped
+                  </span>
                 </div>
-                <p className="text-base font-sans italic mb-5 text-foreground">"{voiceDna.summary}"</p>
-                <div className="grid grid-cols-2 gap-3 text-sm font-mono">
+              </div>
+
+              {/* DNA summary */}
+              <div className="border border-border bg-card p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
+                    Voice DNA Signature
+                  </span>
+                </div>
+                <p className="text-sm font-sans italic mb-4 text-foreground leading-relaxed">
+                  "{voiceDna.summary}"
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                   <Trait label="Tone" value={voiceDna.tone} />
                   <Trait label="Energy" value={voiceDna.energy} />
                   <Trait label="Hook style" value={voiceDna.hookStyle} />
@@ -214,13 +336,14 @@ export default function Onboarding() {
                   {voiceDna.contentStyle && <Trait label="Style" value={voiceDna.contentStyle} />}
                   {voiceDna.pacing && <Trait label="Pacing" value={voiceDna.pacing} />}
                   <Trait label="Formality" value={`${voiceDna.formalityScore}/10`} />
-                  <Trait label="Avg sentence" value={`~${Math.round(voiceDna.avgSentenceLength)} words`} />
+                  <Trait label="Avg sentence" value={`~${Math.round(voiceDna.avgSentenceLength)}w`} />
                 </div>
               </div>
 
-              <div className="flex gap-4 items-center">
+              {/* Actions */}
+              <div className="flex gap-3 items-center">
                 <button
-                  onClick={() => { setStage("input"); setVisibleSteps([]); }}
+                  onClick={() => { setStage("input"); setVisibleSteps([]); setShowDna(false); }}
                   className="text-sm text-muted-foreground hover:text-foreground underline transition-colors"
                 >
                   Re-analyse
@@ -228,7 +351,7 @@ export default function Onboarding() {
                 <button
                   onClick={handleCreateDNA}
                   disabled={stage === "saving" || updateProfile.isPending}
-                  className="flex-1 py-4 bg-primary text-primary-foreground font-black text-lg rounded-none hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                  className="flex-1 py-4 bg-primary text-primary-foreground font-black text-base rounded-none hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   {stage === "saving" || updateProfile.isPending
                     ? "Creating Voice DNA..."
@@ -379,11 +502,21 @@ export default function Onboarding() {
   );
 }
 
+function SpinnerIcon() {
+  return (
+    <motion.div
+      animate={{ rotate: 360 }}
+      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+      className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full flex-shrink-0"
+    />
+  );
+}
+
 function Trait({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-background/50 p-3">
-      <div className="text-xs text-muted-foreground mb-0.5">{label}</div>
-      <div className="font-bold text-foreground capitalize">{value}</div>
+    <div className="bg-background/50 p-2.5">
+      <div className="text-muted-foreground text-xs mb-0.5">{label}</div>
+      <div className="font-bold text-foreground capitalize text-xs">{value}</div>
     </div>
   );
 }
