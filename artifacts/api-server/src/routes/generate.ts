@@ -189,7 +189,7 @@ ${
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "qwen-plus",
+          model: "qwen3.7-plus",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
