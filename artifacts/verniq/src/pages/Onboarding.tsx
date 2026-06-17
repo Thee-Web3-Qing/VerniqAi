@@ -78,7 +78,7 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-3xl">
+    <div className="container mx-auto px-4 md:px-8 py-12 max-w-3xl">
       <div className="flex items-center justify-between mb-12">
         <Logo />
         <div className="flex items-center gap-2">
@@ -134,7 +134,7 @@ export default function Onboarding() {
                 <button 
                   onClick={() => handleSave(samples)}
                   disabled={!samples.trim() || updateProfile.isPending}
-                  className="py-3 px-6 bg-primary text-primary-foreground font-bold rounded hover:bg-primary/90 disabled:opacity-50"
+                  className="py-3 px-6 bg-primary text-primary-foreground font-bold rounded-none hover:bg-primary/90 disabled:opacity-50"
                 >
                   {updateProfile.isPending ? "Analyzing..." : "Analyze my voice →"}
                 </button>
@@ -149,7 +149,7 @@ export default function Onboarding() {
                 <button
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={transcribeAudio.isPending || updateProfile.isPending}
-                  className={`w-32 h-32 rounded-full mx-auto flex items-center justify-center transition-all ${isRecording ? 'bg-destructive/20 text-destructive border-4 border-destructive animate-pulse' : 'bg-primary/10 text-primary border-4 border-primary hover:bg-primary/20'} disabled:opacity-50`}
+                  className={`w-32 h-32 rounded-none mx-auto flex items-center justify-center transition-all ${isRecording ? 'bg-destructive/20 text-destructive border-4 border-destructive animate-pulse' : 'bg-primary/10 text-primary border-4 border-primary hover:bg-primary/20'} disabled:opacity-50`}
                 >
                   <Mic className="w-12 h-12" />
                 </button>

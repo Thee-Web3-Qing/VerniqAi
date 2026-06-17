@@ -8,7 +8,7 @@ export default function History() {
   if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono">Loading history...</div>;
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
+    <div className="container mx-auto px-4 md:px-8 py-12 max-w-4xl">
       <header className="mb-12 border-b border-border pb-8">
         <h1 className="text-4xl font-black font-sans mb-2">History</h1>
         <p className="text-muted-foreground font-mono text-sm">Your previously generated and saved ideas.</p>
@@ -19,7 +19,7 @@ export default function History() {
           <p className="text-muted-foreground font-mono mb-6">No drafts saved yet.</p>
           <button 
             onClick={() => setLocation("/create")}
-            className="px-6 py-2 bg-primary text-primary-foreground font-bold rounded text-sm hover:bg-primary/90 transition-colors"
+            className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded-none text-sm hover:bg-primary/90 transition-colors"
           >
             Create New →
           </button>

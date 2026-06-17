@@ -33,7 +33,7 @@ export default function Profile() {
   if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono">Loading profile...</div>;
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl grid md:grid-cols-[1fr_300px] gap-8">
+    <div className="container mx-auto px-4 md:px-8 py-12 max-w-4xl grid md:grid-cols-[1fr_300px] gap-8">
       <div>
         <header className="mb-8 border-b border-border pb-4">
           <h1 className="text-4xl font-black font-sans">Profile Settings</h1>
@@ -86,7 +86,7 @@ export default function Profile() {
           <button 
             onClick={handleSave}
             disabled={updateProfile.isPending}
-            className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded hover:bg-primary/90 disabled:opacity-50"
+            className="px-6 py-3 bg-primary text-primary-foreground font-bold rounded-none hover:bg-primary/90 disabled:opacity-50"
           >
             {updateProfile.isPending ? "Saving..." : "Save Profile →"}
           </button>

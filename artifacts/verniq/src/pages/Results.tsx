@@ -48,7 +48,7 @@ export default function Results() {
   if (!data) return <div className="p-8 text-center">Loading results...</div>;
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
+    <div className="container mx-auto px-4 md:px-8 py-12 max-w-4xl">
       <header className="mb-12 border-b border-border pb-8 flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-black font-sans mb-2">Generated Output</h1>
@@ -58,7 +58,7 @@ export default function Results() {
           <button 
             data-testid="button-discard"
             onClick={handleDiscard}
-            className="px-4 py-2 border border-border rounded text-sm hover:bg-muted transition-colors"
+            className="px-4 py-2 border border-border rounded-none text-sm hover:bg-muted transition-colors font-bold"
           >
             Discard
           </button>
@@ -66,7 +66,7 @@ export default function Results() {
             data-testid="button-save-draft"
             onClick={handleSave}
             disabled={createDraft.isPending}
-            className="px-6 py-2 bg-primary text-primary-foreground font-bold rounded text-sm hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+            className="px-6 py-2 bg-primary text-primary-foreground font-bold rounded-none text-sm hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
           >
             {createDraft.isPending ? "Saving..." : "Save Draft →"}
           </button>

@@ -62,7 +62,7 @@ export default function CreatorProfile() {
                   // In a real app we'd load this DNA into the session for creating
                   setLocation("/create");
                 }}
-                className="w-full py-3 bg-primary text-primary-foreground font-bold rounded text-sm hover:bg-primary/90 mt-4 shadow-[0_0_15px_rgba(0,255,255,0.1)]"
+                className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-none text-sm hover:bg-primary/90 mt-4"
               >
                 Use this Voice DNA
               </button>

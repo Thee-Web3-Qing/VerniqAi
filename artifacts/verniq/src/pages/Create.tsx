@@ -123,7 +123,7 @@ export default function Create() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-3xl">
+    <div className="container mx-auto px-4 md:px-8 py-12 max-w-3xl">
       <header className="mb-12 border-b border-border pb-8">
         <h1 className="text-4xl font-black font-sans mb-2">Create Content</h1>
         <p className="text-muted-foreground font-mono text-sm">Input your idea. Verniq will repurpose it using your Voice DNA.</p>
@@ -144,7 +144,7 @@ export default function Create() {
             <button
               type="button"
               onClick={isRecording ? stopRecording : startRecording}
-              className={`p-3 rounded-full transition-all ${isRecording ? 'bg-destructive text-destructive-foreground animate-pulse' : 'bg-secondary hover:bg-secondary/80 text-foreground'}`}
+              className={`p-3 rounded-none transition-all ${isRecording ? 'bg-destructive text-destructive-foreground animate-pulse' : 'bg-secondary hover:bg-secondary/80 text-foreground'}`}
               title={isRecording ? "Stop recording" : "Record audio"}
             >
               <Mic className="w-5 h-5" />
@@ -156,7 +156,7 @@ export default function Create() {
           <button
             onClick={handleGenerate}
             disabled={!idea.trim()}
-            className="px-8 py-4 bg-primary text-primary-foreground font-bold rounded text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
+            className="px-8 py-4 bg-primary text-primary-foreground font-bold rounded-none text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
           >
             Generate Workflow →
           </button>

@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode, ComponentType } from "react";
 import { ClerkProvider, Show, useClerk, useAuth } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { Menu, X } from "lucide-react";
 
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -49,43 +50,56 @@ function AuthTokenSync() {
 function Layout({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const { signOut } = useClerk();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navigateTo = (path: string) => {
+    setLocation(path);
+    setMobileMenuOpen(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground dark grid-texture">
+      <Show when="signed-out">
+        <div className="bg-primary text-primary-foreground text-center py-2 px-4 text-xs font-mono font-bold tracking-widest uppercase">
+          ✦ Voice DNA is free during early access — unlimited TikTok scripts &amp; Twitter threads
+        </div>
+      </Show>
+      
       <header className="border-b border-border sticky top-0 bg-background/80 backdrop-blur z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <button onClick={() => setLocation("/")} data-testid="nav-logo">
+            <button onClick={() => navigateTo("/")} data-testid="nav-logo">
               <Logo />
             </button>
             <nav className="hidden md:flex gap-6">
               <button
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setLocation("/creators")}
+                onClick={() => navigateTo("/creators")}
                 data-testid="nav-beginners"
               >
                 For beginners
               </button>
               <button
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setLocation("/create")}
+                onClick={() => navigateTo("/create")}
                 data-testid="nav-creators"
               >
                 For creators
               </button>
             </nav>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4">
             <Show when="signed-in">
               <button
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setLocation("/history")}
+                onClick={() => navigateTo("/history")}
                 data-testid="nav-history"
               >
                 History
               </button>
               <button
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setLocation("/profile")}
+                onClick={() => navigateTo("/profile")}
                 data-testid="nav-profile"
               >
                 Profile
@@ -101,22 +115,89 @@ function Layout({ children }: { children: ReactNode }) {
             <Show when="signed-out">
               <button
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setLocation("/auth")}
+                onClick={() => navigateTo("/auth")}
                 data-testid="nav-signin"
               >
                 Sign in
               </button>
               <button
-                className="text-sm font-medium bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/90 transition-colors"
-                onClick={() => setLocation("/auth#signup")}
+                className="text-sm font-medium bg-primary text-primary-foreground px-4 py-2 rounded-none hover:bg-primary/90 transition-colors"
+                onClick={() => navigateTo("/auth#signup")}
                 data-testid="nav-get-started"
               >
                 Get started
               </button>
             </Show>
           </div>
+          
+          <button 
+            className="md:hidden text-foreground p-2"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
       </header>
+      
+      {/* Mobile Nav */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed top-[64px] left-0 right-0 bg-background border-b border-border z-40 p-4">
+          <nav className="flex flex-col gap-4">
+            <button
+              className="text-sm font-bold text-left py-2 text-foreground"
+              onClick={() => navigateTo("/creators")}
+            >
+              For beginners
+            </button>
+            <button
+              className="text-sm font-bold text-left py-2 text-foreground"
+              onClick={() => navigateTo("/create")}
+            >
+              For creators
+            </button>
+            
+            <Show when="signed-in">
+              <button
+                className="text-sm font-bold text-left py-2 text-foreground"
+                onClick={() => navigateTo("/history")}
+              >
+                History
+              </button>
+              <button
+                className="text-sm font-bold text-left py-2 text-foreground"
+                onClick={() => navigateTo("/profile")}
+              >
+                Profile
+              </button>
+              <button
+                className="text-sm font-bold text-left py-2 text-destructive"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  signOut({ redirectUrl: basePath || "/" });
+                }}
+              >
+                Sign out
+              </button>
+            </Show>
+            
+            <Show when="signed-out">
+              <button
+                className="text-sm font-bold text-left py-2 text-foreground"
+                onClick={() => navigateTo("/auth")}
+              >
+                Sign in
+              </button>
+              <button
+                className="text-sm font-medium bg-primary text-primary-foreground px-4 py-3 rounded-none text-center hover:bg-primary/90 transition-colors"
+                onClick={() => navigateTo("/auth#signup")}
+              >
+                Get started
+              </button>
+            </Show>
+          </nav>
+        </div>
+      )}
+      
       <main className="flex-1">{children}</main>
     </div>
   );
