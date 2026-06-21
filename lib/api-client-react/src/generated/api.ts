@@ -1006,3 +1006,80 @@ export const useRemoveOrgMember = <TError = ErrorType<unknown>, TContext = unkno
   return useMutation({ mutationFn, ...options?.mutation });
 };
 
+// ─── Feed ────────────────────────────────────────────────────────────────────
+
+import type { FeedPost, FeedPostInput, PublicProfile } from './api.schemas';
+
+export const getListFeedPostsQueryKey = () => ['/api/feed'] as const;
+
+export const listFeedPosts = async (
+  options?: SecondParameter<typeof customFetch>,
+): Promise<FeedPost[]> => {
+  return customFetch<FeedPost[]>('/api/feed', { ...options, method: 'GET' });
+};
+
+export const useListFeedPosts = <TData = FeedPost[], TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<FeedPost[], TError, TData> }
+): UseQueryResult<TData, TError> => {
+  const queryFn: QueryFunction<FeedPost[]> = () => listFeedPosts();
+  return useQuery({ queryKey: getListFeedPostsQueryKey(), queryFn, ...options?.query });
+};
+
+export const shareFeedPost = async (
+  data: FeedPostInput,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<FeedPost> => {
+  return customFetch<FeedPost>('/api/feed', {
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const useShareFeedPost = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof shareFeedPost>>, TError, { data: BodyType<FeedPostInput> }, TContext> }
+): UseMutationResult<Awaited<ReturnType<typeof shareFeedPost>>, TError, { data: BodyType<FeedPostInput> }, TContext> => {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof shareFeedPost>>, { data: BodyType<FeedPostInput> }> = (props) => {
+    return shareFeedPost(props.data);
+  };
+  return useMutation({ mutationFn, ...options?.mutation });
+};
+
+export const likeFeedPost = async (
+  postId: string,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<{ like_count: number }> => {
+  return customFetch<{ like_count: number }>(`/api/feed/${postId}/like`, {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const useLikeFeedPost = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof likeFeedPost>>, TError, { postId: string }, TContext> }
+): UseMutationResult<Awaited<ReturnType<typeof likeFeedPost>>, TError, { postId: string }, TContext> => {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof likeFeedPost>>, { postId: string }> = (props) => {
+    return likeFeedPost(props.postId);
+  };
+  return useMutation({ mutationFn, ...options?.mutation });
+};
+
+// ─── Public Voice Profile ─────────────────────────────────────────────────────
+
+export const getPublicProfileQueryKey = (username: string) => ['/api/voice', username] as const;
+
+export const getPublicProfile = async (
+  username: string,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<PublicProfile> => {
+  return customFetch<PublicProfile>(`/api/voice/${encodeURIComponent(username)}`, { ...options, method: 'GET' });
+};
+
+export const useGetPublicProfile = <TData = PublicProfile, TError = ErrorType<unknown>>(
+  username: string,
+  options?: { query?: UseQueryOptions<PublicProfile, TError, TData> }
+): UseQueryResult<TData, TError> => {
+  const queryFn: QueryFunction<PublicProfile> = () => getPublicProfile(username);
+  return useQuery({ queryKey: getPublicProfileQueryKey(username), queryFn, enabled: !!username, ...options?.query });
+};
+

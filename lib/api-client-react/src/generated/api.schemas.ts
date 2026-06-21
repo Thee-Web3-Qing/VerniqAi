@@ -244,3 +244,58 @@ export interface BuildOrgVoiceResult {
   voice_dna: VoiceDNA;
   contributor_count: number;
 }
+
+export type FeedPlatform =
+  | 'tiktok'
+  | 'twitter'
+  | 'instagram'
+  | 'youtube-shorts'
+  | 'linkedin'
+  | 'podcast'
+  | 'newsletter';
+
+export interface FeedPost {
+  id: string;
+  user_id: string;
+  /** @nullable */
+  display_name?: string | null;
+  /** @nullable */
+  avatar_url?: string | null;
+  /** @nullable */
+  niche?: string | null;
+  idea: string;
+  platform: FeedPlatform;
+  content: string;
+  voice_match: number;
+  like_count: number;
+  is_public: boolean;
+  created_at: string;
+}
+
+export interface FeedPostInput {
+  idea: string;
+  platform: FeedPlatform;
+  content: string;
+  voice_match: number;
+}
+
+export interface PublicProfile {
+  id: string;
+  username: string;
+  /** @nullable */
+  display_name?: string | null;
+  /** @nullable */
+  bio?: string | null;
+  /** @nullable */
+  niche?: string | null;
+  /** @nullable */
+  avatar_url?: string | null;
+  voice_dna?: VoiceDNA | null;
+  /** @nullable */
+  voice_dna_0g_hash?: string | null;
+  price_per_generation: number;
+  creator_eligible: boolean;
+  social_connections: SocialConnection[];
+  total_generations_sold: number;
+  recent_posts: FeedPost[];
+}

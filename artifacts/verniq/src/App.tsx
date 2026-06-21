@@ -23,6 +23,8 @@ import CreatorProfile from "@/pages/CreatorProfile";
 import OrgNew from "@/pages/OrgNew";
 import OrgDashboard from "@/pages/OrgDashboard";
 import JoinOrg from "@/pages/JoinOrg";
+import Feed from "@/pages/Feed";
+import VoicePublicProfile from "@/pages/VoicePublicProfile";
 import { Logo } from "@/components/Logo";
 
 const clerkPubKey = publishableKeyFromHost(
@@ -77,17 +79,24 @@ function Layout({ children }: { children: ReactNode }) {
             <nav className="hidden md:flex gap-6">
               <button
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => navigateTo("/feed")}
+                data-testid="nav-feed"
+              >
+                Feed
+              </button>
+              <button
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => navigateTo("/creators")}
                 data-testid="nav-beginners"
               >
-                For beginners
+                Marketplace
               </button>
               <button
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => navigateTo("/create")}
                 data-testid="nav-creators"
               >
-                For creators
+                Create
               </button>
             </nav>
           </div>
@@ -148,15 +157,21 @@ function Layout({ children }: { children: ReactNode }) {
           <nav className="flex flex-col gap-4">
             <button
               className="text-sm font-bold text-left py-2 text-foreground"
+              onClick={() => navigateTo("/feed")}
+            >
+              Feed
+            </button>
+            <button
+              className="text-sm font-bold text-left py-2 text-foreground"
               onClick={() => navigateTo("/creators")}
             >
-              For beginners
+              Marketplace
             </button>
             <button
               className="text-sm font-bold text-left py-2 text-foreground"
               onClick={() => navigateTo("/create")}
             >
-              For creators
+              Create
             </button>
             
             <Show when="signed-in">
@@ -259,6 +274,8 @@ function Router() {
             <Route path="/org/new">{() => <ProtectedRoute component={OrgNew} />}</Route>
             <Route path="/org/join/:code">{() => <ProtectedRoute component={JoinOrg} />}</Route>
             <Route path="/org/:slug">{() => <ProtectedRoute component={OrgDashboard} />}</Route>
+            <Route path="/feed" component={Feed} />
+            <Route path="/voice/:username" component={VoicePublicProfile} />
             <Route component={NotFound} />
           </Switch>
         </Layout>
