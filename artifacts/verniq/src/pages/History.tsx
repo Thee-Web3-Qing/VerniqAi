@@ -27,7 +27,7 @@ export default function History() {
       ) : (
         <div className="grid gap-4">
           {drafts.map(draft => (
-            <div key={draft.id} className="p-6 border border-border rounded-lg bg-card hover:border-primary/50 transition-colors group cursor-pointer" onClick={() => setLocation(`/drafts/${draft.id}`)}>
+            <div key={draft.id} className="p-6 border border-border rounded-lg bg-card hover:border-primary/50 transition-colors group cursor-pointer" onClick={() => setLocation(`/results/${draft.id}`)}>
               <div className="flex justify-between items-start mb-4">
                 <h3 className="font-bold text-lg line-clamp-1 flex-1">{draft.idea}</h3>
                 <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded ml-4">
