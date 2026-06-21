@@ -17,18 +17,30 @@ const PRE_STEPS = [
 
 const MAP_STEP_IDX = PRE_STEPS.length - 1;
 
-const LANGUAGES: { code: Language; label: string; native: string }[] = [
-  { code: "english",   label: "English",   native: "English"    },
-  { code: "hindi",     label: "Hindi",     native: "हिन्दी"     },
-  { code: "bengali",   label: "Bengali",   native: "বাংলা"      },
-  { code: "tamil",     label: "Tamil",     native: "தமிழ்"      },
-  { code: "telugu",    label: "Telugu",    native: "తెలుగు"     },
-  { code: "kannada",   label: "Kannada",   native: "ಕನ್ನಡ"      },
-  { code: "malayalam", label: "Malayalam", native: "മലയാളം"     },
-  { code: "marathi",   label: "Marathi",   native: "मराठी"      },
-  { code: "gujarati",  label: "Gujarati",  native: "ગુજરાતી"    },
-  { code: "punjabi",   label: "Punjabi",   native: "ਪੰਜਾਬੀ"     },
-  { code: "odia",      label: "Odia",      native: "ଓଡ଼ିଆ"      },
+const LANGUAGES: { code: Language; label: string; native: string; group: "global" | "indian" }[] = [
+  { code: "english",    label: "English",    native: "English",    group: "global" },
+  { code: "spanish",    label: "Spanish",    native: "Español",    group: "global" },
+  { code: "french",     label: "French",     native: "Français",   group: "global" },
+  { code: "portuguese", label: "Portuguese", native: "Português",  group: "global" },
+  { code: "arabic",     label: "Arabic",     native: "العربية",    group: "global" },
+  { code: "german",     label: "German",     native: "Deutsch",    group: "global" },
+  { code: "japanese",   label: "Japanese",   native: "日本語",      group: "global" },
+  { code: "korean",     label: "Korean",     native: "한국어",      group: "global" },
+  { code: "indonesian", label: "Indonesian", native: "Bahasa",     group: "global" },
+  { code: "russian",    label: "Russian",    native: "Русский",    group: "global" },
+  { code: "italian",    label: "Italian",    native: "Italiano",   group: "global" },
+  { code: "turkish",    label: "Turkish",    native: "Türkçe",     group: "global" },
+  { code: "swahili",    label: "Swahili",    native: "Kiswahili",  group: "global" },
+  { code: "hindi",      label: "Hindi",      native: "हिन्दी",     group: "indian" },
+  { code: "bengali",    label: "Bengali",    native: "বাংলা",      group: "indian" },
+  { code: "tamil",      label: "Tamil",      native: "தமிழ்",      group: "indian" },
+  { code: "telugu",     label: "Telugu",     native: "తెలుగు",     group: "indian" },
+  { code: "kannada",    label: "Kannada",    native: "ಕನ್ನಡ",      group: "indian" },
+  { code: "malayalam",  label: "Malayalam",  native: "മലയാളം",     group: "indian" },
+  { code: "marathi",    label: "Marathi",    native: "मराठी",      group: "indian" },
+  { code: "gujarati",   label: "Gujarati",   native: "ગુજરાતી",    group: "indian" },
+  { code: "punjabi",    label: "Punjabi",    native: "ਪੰਜਾਬੀ",     group: "indian" },
+  { code: "odia",       label: "Odia",       native: "ଓଡ଼ିଆ",      group: "indian" },
 ];
 
 function SpinnerIcon() {
@@ -419,23 +431,49 @@ export default function Onboarding() {
         <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-3">
           Content Language
         </label>
-        <div className="flex flex-wrap gap-2">
-          {LANGUAGES.map((lang) => (
-            <button
-              key={lang.code}
-              onClick={() => setSelectedLanguage(lang.code)}
-              className={`px-3 py-1.5 border text-sm font-mono rounded-none transition-all ${
-                selectedLanguage === lang.code
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border hover:border-primary/50 text-muted-foreground"
-              }`}
-            >
-              {lang.native}
-            </button>
-          ))}
+
+        <div className="space-y-3">
+          <div>
+            <span className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-2 block">Global</span>
+            <div className="flex flex-wrap gap-2">
+              {LANGUAGES.filter(l => l.group === "global").map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => setSelectedLanguage(lang.code)}
+                  className={`px-3 py-1.5 border text-sm font-mono rounded-none transition-all ${
+                    selectedLanguage === lang.code
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/50 text-muted-foreground"
+                  }`}
+                >
+                  {lang.native}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <span className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-2 block">Indian</span>
+            <div className="flex flex-wrap gap-2">
+              {LANGUAGES.filter(l => l.group === "indian").map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => setSelectedLanguage(lang.code)}
+                  className={`px-3 py-1.5 border text-sm font-mono rounded-none transition-all ${
+                    selectedLanguage === lang.code
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/50 text-muted-foreground"
+                  }`}
+                >
+                  {lang.native}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
+
         {selectedLanguage !== "english" && (
-          <p className="text-xs font-mono text-primary mt-2">
+          <p className="text-xs font-mono text-primary mt-3">
             ✓ All generated content will be in {LANGUAGES.find(l => l.code === selectedLanguage)?.label}
           </p>
         )}

@@ -51,6 +51,18 @@ export interface PaymentInfo {
 
 export type Language =
   | 'english'
+  | 'spanish'
+  | 'french'
+  | 'portuguese'
+  | 'arabic'
+  | 'german'
+  | 'japanese'
+  | 'korean'
+  | 'indonesian'
+  | 'russian'
+  | 'italian'
+  | 'turkish'
+  | 'swahili'
   | 'hindi'
   | 'bengali'
   | 'tamil'
