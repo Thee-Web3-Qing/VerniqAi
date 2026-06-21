@@ -83,11 +83,23 @@ function CryptoPayModal({
 
         {step === "info" && (
           <div className="p-8 space-y-6">
+            {!walletAddress ? (
+              <div className="text-center space-y-3">
+                <div className="text-xs font-mono text-amber-500 uppercase tracking-widest">Not Ready</div>
+                <h2 className="text-xl font-black font-sans">Creator hasn't set up payments</h2>
+                <p className="text-sm text-muted-foreground font-mono">
+                  This creator hasn't configured a wallet address yet. Check back later or contact them directly.
+                </p>
+                <button onClick={onClose} className="mt-4 w-full py-3 border border-border text-sm font-mono hover:border-primary transition-colors">
+                  Close
+                </button>
+              </div>
+            ) : (<>
             <div>
               <div className="text-xs font-mono text-primary uppercase tracking-widest mb-1">Step 1 of 2</div>
               <h2 className="text-xl font-black font-sans">Send crypto to unlock this voice</h2>
               <p className="text-sm text-muted-foreground font-mono mt-1">
-                Send <span className="font-bold text-foreground">${priceUsd.toFixed(2)} USD</span> worth of crypto to {creatorName}'s wallet.
+                Send <span className="font-bold text-foreground">${priceUsd.toFixed(2)} USD</span> worth of crypto to {creatorName}'s wallet. You'll get <span className="font-bold text-foreground">3 generations</span>.
               </p>
             </div>
 
@@ -138,6 +150,7 @@ function CryptoPayModal({
             >
               I've sent the payment →
             </button>
+          </>)}
           </div>
         )}
 
@@ -260,11 +273,11 @@ export default function CreatorProfile() {
 
   return (
     <>
-      {showPayModal && creator.wallet_address && (
+      {showPayModal && (
         <CryptoPayModal
           creatorId={creator.id}
           creatorName={creator.display_name || "Creator"}
-          walletAddress={creator.wallet_address}
+          walletAddress={creator.wallet_address || ""}
           priceUsd={creator.price_per_generation / 100}
           onClose={() => setShowPayModal(false)}
           onSuccess={() => { setShowPayModal(false); handleUseVoice(); }}
