@@ -154,7 +154,7 @@ function CryptoPayModal({
                   <p className="text-xs font-mono text-muted-foreground">
                     Buy <span className="font-bold text-foreground">{tokenLabel}</span> with Naira or bank transfer via <span className="font-bold text-foreground">Ramphub</span>.
                   </p>
-                  <a href="https://ramphub.com" target="_blank" rel="noopener noreferrer"
+                  <a href="https://ramphub.io" target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm font-bold text-primary hover:underline">
                     Buy crypto on Ramphub <ExternalLink className="w-3.5 h-3.5" />
                   </a>
