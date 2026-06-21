@@ -49,6 +49,33 @@ export interface PaymentInfo {
   creatorId: string;
 }
 
+export interface PaymentInitResult {
+  paymentLink?: string;
+  txRef?: string;
+  alreadyPurchased?: boolean;
+  alreadyFree?: boolean;
+}
+
+export interface PaymentVerifyResult {
+  success: boolean;
+  alreadyPurchased?: boolean;
+}
+
+export interface PaymentCheckResult {
+  purchased: boolean;
+  pricePerGeneration: number;
+}
+
+export interface InitiatePaymentInput {
+  creatorId: string;
+  callbackUrl: string;
+}
+
+export interface VerifyPaymentInput {
+  transactionId: string | number;
+  creatorId: string;
+}
+
 export type Language =
   | 'english'
   | 'spanish'

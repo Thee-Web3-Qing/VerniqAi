@@ -29,13 +29,18 @@ import type {
   GenerateInput,
   GenerateResult,
   HealthStatus,
+  InitiatePaymentInput,
   JoinOrgInput,
   Organization,
   OrgListItem,
+  PaymentCheckResult,
+  PaymentInitResult,
+  PaymentVerifyResult,
   Profile,
   ProfileUpdate,
   TranscribeInput,
-  TranscribeResult
+  TranscribeResult,
+  VerifyPaymentInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1062,6 +1067,67 @@ export const useLikeFeedPost = <TError = ErrorType<unknown>, TContext = unknown>
     return likeFeedPost(props.postId);
   };
   return useMutation({ mutationFn, ...options?.mutation });
+};
+
+// ─── Payments ─────────────────────────────────────────────────────────────────
+
+export const initiateVoicePayment = async (
+  input: InitiatePaymentInput,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<PaymentInitResult> => {
+  return customFetch<PaymentInitResult>('/api/payment/initiate', {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+};
+
+export const useInitiateVoicePayment = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof initiateVoicePayment>>, TError, InitiatePaymentInput, TContext> }
+): UseMutationResult<Awaited<ReturnType<typeof initiateVoicePayment>>, TError, InitiatePaymentInput, TContext> => {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof initiateVoicePayment>>, InitiatePaymentInput> = (vars) => {
+    return initiateVoicePayment(vars);
+  };
+  return useMutation({ mutationFn, ...options?.mutation });
+};
+
+export const verifyVoicePayment = async (
+  input: VerifyPaymentInput,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<PaymentVerifyResult> => {
+  return customFetch<PaymentVerifyResult>('/api/payment/verify', {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+};
+
+export const useVerifyVoicePayment = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof verifyVoicePayment>>, TError, VerifyPaymentInput, TContext> }
+): UseMutationResult<Awaited<ReturnType<typeof verifyVoicePayment>>, TError, VerifyPaymentInput, TContext> => {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyVoicePayment>>, VerifyPaymentInput> = (vars) => {
+    return verifyVoicePayment(vars);
+  };
+  return useMutation({ mutationFn, ...options?.mutation });
+};
+
+export const checkVoicePurchaseQueryKey = (creatorId: string) => ['/api/payment/check', creatorId] as const;
+
+export const checkVoicePurchase = async (
+  creatorId: string,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<PaymentCheckResult> => {
+  return customFetch<PaymentCheckResult>(`/api/payment/check/${encodeURIComponent(creatorId)}`, { ...options, method: 'GET' });
+};
+
+export const useCheckVoicePurchase = <TData = PaymentCheckResult, TError = ErrorType<unknown>>(
+  creatorId: string,
+  options?: { query?: UseQueryOptions<PaymentCheckResult, TError, TData> }
+): UseQueryResult<TData, TError> => {
+  const queryFn: QueryFunction<PaymentCheckResult> = () => checkVoicePurchase(creatorId);
+  return useQuery({ queryKey: checkVoicePurchaseQueryKey(creatorId), queryFn, enabled: !!creatorId, ...options?.query });
 };
 
 // ─── Public Voice Profile ─────────────────────────────────────────────────────

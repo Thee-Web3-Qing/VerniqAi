@@ -1,8 +1,9 @@
-import { useGetCreator } from "@workspace/api-client-react";
+import { useGetCreator, useCheckVoicePurchase, useInitiateVoicePayment } from "@workspace/api-client-react";
 import type { SocialConnection } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
-import { Brain, Copy, CheckCircle2, ExternalLink } from "lucide-react";
+import { Brain, Copy, CheckCircle2, ExternalLink, Lock, Unlock } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@clerk/react";
 
 const PLATFORM_ICONS: Record<string, string> = {
   tiktok: "📱",
@@ -21,15 +22,20 @@ function truncateAddress(addr: string) {
 export default function CreatorProfile() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
+  const { isSignedIn } = useAuth();
   const { data: creator, isLoading } = useGetCreator(id || "");
+  const { data: purchaseStatus } = useCheckVoicePurchase(isSignedIn ? (id || "") : "");
+  const initiatePayment = useInitiateVoicePayment();
   const [copied, setCopied] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono">Loading profile...</div>;
   if (!creator) return <div className="p-8 text-center text-muted-foreground font-mono">Creator not found.</div>;
 
   const socials = (creator.social_connections as SocialConnection[]) ?? [];
-  const eligibleSocials = socials.filter(s => s.followerCount >= 5000);
   const totalFollowers = socials.reduce((sum, s) => sum + s.followerCount, 0);
+  const isPaid = creator.price_per_generation > 0;
+  const alreadyPurchased = purchaseStatus?.purchased ?? !isPaid;
 
   const handleCopyWallet = () => {
     if (creator.wallet_address) {
@@ -49,6 +55,26 @@ export default function CreatorProfile() {
       niche: creator.niche,
     }));
     setLocation("/create");
+  };
+
+  const handlePayAndUse = async () => {
+    if (!isSignedIn) {
+      setLocation("/auth");
+      return;
+    }
+    setPaying(true);
+    try {
+      const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const callbackUrl = `${window.location.origin}${basePath}/payment/callback?creatorId=${creator.id}`;
+      const result = await initiatePayment.mutateAsync({ creatorId: creator.id, callbackUrl });
+      if (result.alreadyPurchased || result.alreadyFree) {
+        handleUseVoice();
+      } else if (result.paymentLink) {
+        window.location.href = result.paymentLink;
+      }
+    } catch {
+      setPaying(false);
+    }
   };
 
   return (
@@ -88,7 +114,6 @@ export default function CreatorProfile() {
       <div className="grid md:grid-cols-[1fr_340px] gap-8">
         {/* Left: Social proof + about */}
         <div className="space-y-6">
-          {/* Social connections */}
           {socials.length > 0 && (
             <div className="border border-border bg-card p-6">
               <h2 className="text-sm font-black font-sans text-muted-foreground uppercase tracking-wider mb-4">Verified Socials</h2>
@@ -154,20 +179,32 @@ export default function CreatorProfile() {
         {/* Right: Purchase panel */}
         <div>
           <div className="border border-primary/40 bg-card sticky top-24">
-            <div className="px-6 py-4 border-b border-border">
+            <div className="px-6 py-4 border-b border-border flex items-center gap-2">
+              {isPaid && !alreadyPurchased ? (
+                <Lock className="w-3.5 h-3.5 text-primary" />
+              ) : (
+                <Unlock className="w-3.5 h-3.5 text-green-500" />
+              )}
               <h2 className="text-sm font-black font-sans text-primary uppercase tracking-wider">Use This Voice</h2>
             </div>
 
             <div className="p-6 space-y-5">
               {/* Pricing */}
               <div className="text-center">
-                {creator.price_per_generation > 0 ? (
-                  <>
-                    <div className="text-4xl font-black font-sans text-primary mb-1">
-                      ${(creator.price_per_generation / 100).toFixed(2)}
-                    </div>
-                    <div className="text-xs font-mono text-muted-foreground">per generation</div>
-                  </>
+                {isPaid ? (
+                  alreadyPurchased ? (
+                    <>
+                      <div className="text-4xl font-black font-sans text-green-500 mb-1">Unlocked</div>
+                      <div className="text-xs font-mono text-muted-foreground">you own access to this voice</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-4xl font-black font-sans text-primary mb-1">
+                        ${(creator.price_per_generation / 100).toFixed(2)}
+                      </div>
+                      <div className="text-xs font-mono text-muted-foreground">one-time payment · unlimited use</div>
+                    </>
+                  )
                 ) : (
                   <>
                     <div className="text-4xl font-black font-sans text-green-500 mb-1">Free</div>
@@ -176,66 +213,60 @@ export default function CreatorProfile() {
                 )}
               </div>
 
-              {/* Wallet */}
-              {creator.wallet_address && creator.price_per_generation > 0 && (
+              {/* Payment steps for unpurchased paid voices */}
+              {isPaid && !alreadyPurchased && (
                 <div className="border border-border bg-background p-4 space-y-2">
-                  <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Payment wallet</div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-foreground flex-1 truncate">
-                      {truncateAddress(creator.wallet_address)}
-                    </span>
-                    <button
-                      onClick={handleCopyWallet}
-                      className="p-1.5 border border-border hover:border-primary transition-colors"
-                      title="Copy full address"
-                    >
-                      {copied ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5 text-muted-foreground" />
-                      )}
-                    </button>
-                  </div>
-                  {copied && (
-                    <p className="text-xs font-mono text-green-500">Address copied!</p>
-                  )}
+                  <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-3">How it works</div>
+                  {[
+                    "Pay once via card or mobile money",
+                    "Access is recorded to your account",
+                    "Generate content with this voice anytime",
+                  ].map((step, i) => (
+                    <div key={i} className="flex gap-3 text-xs font-mono">
+                      <span className="text-primary font-bold flex-shrink-0">{i + 1}</span>
+                      <span className="text-muted-foreground">{step}</span>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              {/* How it works */}
-              {creator.price_per_generation > 0 && (
-                <div className="space-y-2 text-xs font-mono text-muted-foreground">
-                  <div className="flex gap-2">
-                    <span className="text-primary font-bold">1</span>
-                    <span>Click "Use This Voice DNA" below</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-primary font-bold">2</span>
-                    <span>Generate your content</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-primary font-bold">3</span>
-                    <span>Send ${(creator.price_per_generation / 100).toFixed(2)} to the wallet above</span>
-                  </div>
-                </div>
-              )}
-
+              {/* CTA button */}
               {creator.voice_dna ? (
-                <button
-                  onClick={handleUseVoice}
-                  className="w-full py-4 bg-primary text-primary-foreground font-bold rounded-none text-sm hover:bg-primary/90 transition-colors"
-                >
-                  Use This Voice DNA →
-                </button>
+                alreadyPurchased || !isPaid ? (
+                  <button
+                    onClick={handleUseVoice}
+                    className="w-full py-4 bg-primary text-primary-foreground font-bold rounded-none text-sm hover:bg-primary/90 transition-colors"
+                  >
+                    Use This Voice DNA →
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePayAndUse}
+                    disabled={paying || initiatePayment.isPending}
+                    className="w-full py-4 bg-primary text-primary-foreground font-bold rounded-none text-sm hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {paying || initiatePayment.isPending
+                      ? "Redirecting to payment…"
+                      : `Pay $${(creator.price_per_generation / 100).toFixed(2)} via Flutterwave →`}
+                  </button>
+                )
               ) : (
                 <div className="text-center text-xs font-mono text-muted-foreground border border-dashed border-border p-4">
                   This creator has not exposed their Voice DNA yet.
                 </div>
               )}
 
-              <p className="text-xs font-mono text-muted-foreground text-center">
-                Payment is on an honor system. Always pay creators for their work.
-              </p>
+              {isPaid && !alreadyPurchased && (
+                <p className="text-xs font-mono text-muted-foreground text-center">
+                  Powered by Flutterwave · Cards, mobile money & more
+                </p>
+              )}
+
+              {alreadyPurchased && isPaid && (
+                <p className="text-xs font-mono text-green-600 text-center font-bold">
+                  ✓ Payment verified — this voice is yours
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -25,6 +25,7 @@ import OrgDashboard from "@/pages/OrgDashboard";
 import JoinOrg from "@/pages/JoinOrg";
 import Feed from "@/pages/Feed";
 import VoicePublicProfile from "@/pages/VoicePublicProfile";
+import PaymentCallback from "@/pages/PaymentCallback";
 import { Logo } from "@/components/Logo";
 
 const clerkPubKey = publishableKeyFromHost(
@@ -276,6 +277,7 @@ function Router() {
             <Route path="/org/:slug">{() => <ProtectedRoute component={OrgDashboard} />}</Route>
             <Route path="/feed" component={Feed} />
             <Route path="/voice/:username" component={VoicePublicProfile} />
+            <Route path="/payment/callback">{() => <ProtectedRoute component={PaymentCallback} />}</Route>
             <Route component={NotFound} />
           </Switch>
         </Layout>

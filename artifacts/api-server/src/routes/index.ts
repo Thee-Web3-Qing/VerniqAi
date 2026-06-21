@@ -9,6 +9,7 @@ import analyseVoiceRouter from "./analyse-voice";
 import orgsRouter from "./orgs";
 import feedRouter from "./feed";
 import voiceProfileRouter from "./voice-profile";
+import paymentRouter from "./payment";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(analyseVoiceRouter);
 router.use(orgsRouter);
 router.use(feedRouter);
 router.use(voiceProfileRouter);
+router.use(paymentRouter);
 
 export default router;

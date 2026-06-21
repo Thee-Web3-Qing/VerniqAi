@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
-import { db, profilesTable, organizationsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, profilesTable, organizationsTable, voicePurchasesTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -160,6 +160,18 @@ router.post("/generate", requireAuth, async (req, res) => {
       return;
     }
     const creator = creatorRows[0];
+
+    if (creator.pricePerGeneration > 0) {
+      const purchases = await db
+        .select()
+        .from(voicePurchasesTable)
+        .where(and(eq(voicePurchasesTable.buyerUserId, userId!), eq(voicePurchasesTable.creatorId, creatorId)));
+      if (purchases.length === 0) {
+        res.status(402).json({ error: "Payment required. Purchase this creator's voice first." });
+        return;
+      }
+    }
+
     dna = creator.voiceDna as VoiceDNA | null;
 
     await db
