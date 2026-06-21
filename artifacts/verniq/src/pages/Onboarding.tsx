@@ -17,6 +17,23 @@ const PRE_STEPS = [
 
 const MAP_STEP_IDX = PRE_STEPS.length - 1;
 
+// BCP-47 tags for the Web Speech API (used for global languages)
+const SPEECH_RECOGNITION_LANGS: Partial<Record<Language, string>> = {
+  english: "en-US",
+  spanish: "es-ES",
+  french: "fr-FR",
+  portuguese: "pt-BR",
+  arabic: "ar-SA",
+  german: "de-DE",
+  japanese: "ja-JP",
+  korean: "ko-KR",
+  indonesian: "id-ID",
+  russian: "ru-RU",
+  italian: "it-IT",
+  turkish: "tr-TR",
+  swahili: "sw-KE",
+};
+
 const LANGUAGES: { code: Language; label: string; native: string; group: "global" | "indian" }[] = [
   { code: "english",    label: "English",    native: "English",    group: "global" },
   { code: "spanish",    label: "Spanish",    native: "Español",    group: "global" },
@@ -91,6 +108,9 @@ export default function Onboarding() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const webSpeechRef = useRef<any>(null);
+  const webSpeechTranscriptRef = useRef<string>("");
 
   useEffect(() => {
     if (stage !== "analysing") return;
@@ -125,53 +145,106 @@ export default function Onboarding() {
     }
   }, [stage]);
 
+  const selectedLangMeta = LANGUAGES.find(l => l.code === selectedLanguage);
+  const useWebSpeech = selectedLangMeta?.group === "global";
+
   const startRecording = async () => {
-    try {
-      setAudioTranscript("");
-      setTranscriptReady(false);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-      recordingStartRef.current = Date.now();
+    setAudioTranscript("");
+    setTranscriptReady(false);
+    webSpeechTranscriptRef.current = "";
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+    if (useWebSpeech) {
+      // ── Web Speech API path (global languages) ────────────────────────────
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Your browser doesn't support voice recognition. Please use Chrome or Edge.");
+        return;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.lang = SPEECH_RECOGNITION_LANGS[selectedLanguage] ?? "en-US";
+      recognition.continuous = true;
+      recognition.interimResults = false;
+
+      recognition.onresult = (event: { results: SpeechRecognitionResultList }) => {
+        const newText = Array.from(event.results)
+          .map((r) => r[0].transcript)
+          .join(" ");
+        webSpeechTranscriptRef.current = newText;
+        setAudioTranscript(newText);
       };
 
-      mediaRecorder.onstop = async () => {
-        const duration = (Date.now() - recordingStartRef.current) / 1000;
-        setAudioDuration(duration);
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => {
-          const base64data = (reader.result as string).split(",")[1];
-          transcribeAudio.mutate(
-            { data: { audioBase64: base64data, mime: "audio/webm", audioDurationSeconds: duration } },
-            {
-              onSuccess: (res) => {
-                setAudioTranscript(res.transcript ?? "");
-                setTranscriptReady(true);
-              },
-            }
-          );
-        };
+      recognition.onerror = (event: { error: string }) => {
+        console.error("Web Speech error:", event.error);
+        setIsRecording(false);
+        if (webSpeechTranscriptRef.current) setTranscriptReady(true);
       };
 
-      mediaRecorder.start();
+      recognition.onend = () => {
+        setIsRecording(false);
+        if (webSpeechTranscriptRef.current.trim()) {
+          setAudioTranscript(webSpeechTranscriptRef.current);
+          setTranscriptReady(true);
+        }
+      };
+
+      webSpeechRef.current = recognition;
+      recognition.start();
       setIsRecording(true);
-    } catch {
-      alert("Could not access microphone. Please allow microphone access.");
+    } else {
+      // ── Sarvam path (Indian languages) ───────────────────────────────────
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        chunksRef.current = [];
+        recordingStartRef.current = Date.now();
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          const duration = (Date.now() - recordingStartRef.current) / 1000;
+          setAudioDuration(duration);
+          const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = () => {
+            const base64data = (reader.result as string).split(",")[1];
+            transcribeAudio.mutate(
+              { data: { audioBase64: base64data, mime: "audio/webm", audioDurationSeconds: duration } },
+              {
+                onSuccess: (res) => {
+                  setAudioTranscript(res.transcript ?? "");
+                  setTranscriptReady(true);
+                },
+              }
+            );
+          };
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+      } catch {
+        alert("Could not access microphone. Please allow microphone access.");
+      }
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+    if (useWebSpeech) {
+      if (webSpeechRef.current) {
+        webSpeechRef.current.stop();
+        webSpeechRef.current = null;
+      }
+    } else {
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+      }
     }
+    setIsRecording(false);
   };
 
   const textToAnalyse = mode === "writer" ? samples : audioTranscript;
@@ -521,8 +594,19 @@ export default function Onboarding() {
           ) : (
             <div className="space-y-8">
               <p className="text-sm text-muted-foreground">
-                Record yourself talking naturally — share a thought, tell a story, react to something. Sarvam will transcribe it, Qwen will map your voice signature.
+                Record yourself talking naturally — share a thought, tell a story, react to something.{" "}
+                {useWebSpeech
+                  ? "Your browser's built-in speech recognition will transcribe it live."
+                  : "Sarvam AI will transcribe it."}{" "}
+                Qwen will then map your voice signature.
               </p>
+
+              {useWebSpeech && (
+                <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground border border-border px-3 py-2 bg-card">
+                  <span className="text-primary">●</span>
+                  Browser speech recognition · works best in Chrome / Edge · speak clearly
+                </div>
+              )}
 
               {!transcriptReady && (
                 <div className="flex flex-col items-center gap-6 py-4">
@@ -538,7 +622,11 @@ export default function Onboarding() {
                     {isRecording ? <MicOff className="w-12 h-12" /> : <Mic className="w-12 h-12" />}
                   </button>
                   <p className="text-sm text-muted-foreground font-mono h-6 text-center">
-                    {isRecording ? "Recording... tap to stop" : transcribeAudio.isPending ? "Transcribing with Sarvam..." : "Tap to start recording"}
+                    {isRecording
+                      ? `Recording in ${selectedLangMeta?.label ?? ""}... tap to stop`
+                      : transcribeAudio.isPending
+                      ? "Transcribing with Sarvam AI..."
+                      : `Tap to start recording`}
                   </p>
                   {transcribeAudio.isPending && (
                     <div className="w-full max-w-xs h-1 bg-border overflow-hidden">
