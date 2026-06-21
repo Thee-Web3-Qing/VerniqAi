@@ -51,7 +51,7 @@ export interface PaymentInfo {
 
 export interface PaymentInfoResult {
   free?: boolean;
-  alreadyPurchased?: boolean;
+  generationsRemaining?: number;
   walletAddress?: string;
   priceUsd?: number;
   creatorName?: string;
@@ -59,11 +59,12 @@ export interface PaymentInfoResult {
 
 export interface PaymentVerifyResult {
   success: boolean;
-  alreadyPurchased?: boolean;
+  generationsRemaining?: number;
 }
 
 export interface PaymentCheckResult {
   purchased: boolean;
+  generationsRemaining: number;
   pricePerGeneration: number;
 }
 

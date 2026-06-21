@@ -7,6 +7,7 @@ export const voicePurchasesTable = pgTable("voice_purchases", {
   flwTransactionId: text("flw_transaction_id"),
   txRef: text("tx_ref"),
   amountPaid: integer("amount_paid").notNull(),
+  generationsRemaining: integer("generations_remaining").notNull().default(3),
   status: text("status").notNull().default("paid"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

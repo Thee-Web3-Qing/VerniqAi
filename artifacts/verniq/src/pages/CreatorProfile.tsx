@@ -238,7 +238,8 @@ export default function CreatorProfile() {
   const socials = (creator.social_connections as SocialConnection[]) ?? [];
   const totalFollowers = socials.reduce((sum, s) => sum + s.followerCount, 0);
   const isPaid = creator.price_per_generation > 0;
-  const alreadyPurchased = purchaseStatus?.purchased ?? !isPaid;
+  const generationsRemaining = purchaseStatus?.generationsRemaining ?? 0;
+  const alreadyPurchased = !isPaid || generationsRemaining > 0;
 
   const handleUseVoice = () => {
     sessionStorage.setItem("verniq.selectedCreator", JSON.stringify({
@@ -375,21 +376,23 @@ export default function CreatorProfile() {
                   {isPaid ? (
                     alreadyPurchased ? (
                       <>
-                        <div className="text-4xl font-black font-sans text-green-500 mb-1">Unlocked</div>
-                        <div className="text-xs font-mono text-muted-foreground">you own access to this voice</div>
+                        <div className="text-4xl font-black font-sans text-green-500 mb-1">{generationsRemaining}</div>
+                        <div className="text-xs font-mono text-muted-foreground">
+                          generation{generationsRemaining !== 1 ? "s" : ""} remaining
+                        </div>
                       </>
                     ) : (
                       <>
                         <div className="text-4xl font-black font-sans text-primary mb-1">
                           ${(creator.price_per_generation / 100).toFixed(2)}
                         </div>
-                        <div className="text-xs font-mono text-muted-foreground">one-time · pay in crypto</div>
+                        <div className="text-xs font-mono text-muted-foreground">3 generations · pay in crypto</div>
                       </>
                     )
                   ) : (
                     <>
                       <div className="text-4xl font-black font-sans text-green-500 mb-1">Free</div>
-                      <div className="text-xs font-mono text-muted-foreground">no charge to use</div>
+                      <div className="text-xs font-mono text-muted-foreground">unlimited use</div>
                     </>
                   )}
                 </div>
@@ -398,8 +401,8 @@ export default function CreatorProfile() {
                   <div className="border border-border bg-background p-4 space-y-2">
                     {[
                       "Pay creator's wallet in crypto",
-                      "Use Ramphub to buy crypto with Naira",
-                      "Paste tx hash → instant unlock",
+                      "Use Ramphub to convert Naira → crypto",
+                      "Paste tx hash → 3 generations unlocked",
                     ].map((step, i) => (
                       <div key={i} className="flex gap-3 text-xs font-mono">
                         <span className="text-primary font-bold flex-shrink-0">{i + 1}</span>
@@ -437,9 +440,22 @@ export default function CreatorProfile() {
                   </p>
                 )}
                 {alreadyPurchased && isPaid && (
-                  <p className="text-xs font-mono text-green-600 text-center font-bold">
-                    ✓ Payment verified on-chain
-                  </p>
+                  <>
+                    <div className="w-full bg-border rounded-none h-1.5 overflow-hidden">
+                      <div
+                        className="h-full bg-green-500 transition-all"
+                        style={{ width: `${Math.min(100, (generationsRemaining / 3) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs font-mono text-green-600 text-center font-bold">
+                      ✓ {generationsRemaining} / 3 generations left
+                    </p>
+                    {generationsRemaining === 1 && (
+                      <p className="text-xs font-mono text-amber-500 text-center">
+                        Last generation — top up after this one
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

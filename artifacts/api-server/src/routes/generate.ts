@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
 import { db, profilesTable, organizationsTable, voicePurchasesTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gt } from "drizzle-orm";
 
 const router = Router();
 
@@ -162,14 +162,22 @@ router.post("/generate", requireAuth, async (req, res) => {
     const creator = creatorRows[0];
 
     if (creator.pricePerGeneration > 0) {
-      const purchases = await db
+      const [activePurchase] = await db
         .select()
         .from(voicePurchasesTable)
-        .where(and(eq(voicePurchasesTable.buyerUserId, userId!), eq(voicePurchasesTable.creatorId, creatorId)));
-      if (purchases.length === 0) {
-        res.status(402).json({ error: "Payment required. Purchase this creator's voice first." });
+        .where(and(
+          eq(voicePurchasesTable.buyerUserId, userId!),
+          eq(voicePurchasesTable.creatorId, creatorId),
+          gt(voicePurchasesTable.generationsRemaining, 0),
+        ));
+      if (!activePurchase) {
+        res.status(402).json({ error: "No generations remaining. Purchase 3 more generations to continue." });
         return;
       }
+      await db
+        .update(voicePurchasesTable)
+        .set({ generationsRemaining: activePurchase.generationsRemaining - 1 })
+        .where(eq(voicePurchasesTable.id, activePurchase.id));
     }
 
     dna = creator.voiceDna as VoiceDNA | null;

@@ -15,13 +15,19 @@ const CHAIN_RPC: Record<Chain, string> = {
   tron: "https://api.trongrid.io/",
 };
 
+type TronTx = {
+  ret?: Array<{ contractRet?: string }>;
+  raw_data?: { contract?: Array<{ parameter?: { value?: { to_address?: string } } }> };
+};
+type TronResp = { data?: TronTx[] };
+
 async function verifyOnChain(txHash: string, creatorWallet: string, chain: Chain): Promise<boolean> {
   try {
     if (chain === "tron") {
       const res = await fetch(`https://api.trongrid.io/v1/transactions/${txHash}`, {
         headers: { Accept: "application/json" },
       });
-      const data = (await res.json()) as { data?: Array<{ ret?: Array<{ contractRet?: string }>; raw_data?: { contract?: Array<{ parameter?: { value?: { to_address?: string } } }> }> }> };
+      const data = (await res.json()) as TronResp;
       const tx = data.data?.[0];
       if (!tx) return false;
       const confirmed = tx.ret?.[0]?.contractRet === "SUCCESS";
@@ -70,14 +76,16 @@ router.get("/payment/info/:creatorId", requireAuth, async (req, res) => {
     return;
   }
 
-  const existing = await db
+  const rows = await db
     .select()
     .from(voicePurchasesTable)
     .where(and(eq(voicePurchasesTable.buyerUserId, userId!), eq(voicePurchasesTable.creatorId, creatorId)));
 
+  const generationsRemaining = rows.reduce((sum, r) => sum + r.generationsRemaining, 0);
+
   res.json({
     free: false,
-    alreadyPurchased: existing.length > 0,
+    generationsRemaining,
     walletAddress: creator.walletAddress,
     priceUsd: creator.pricePerGeneration / 100,
     creatorName: creator.displayName ?? "Creator",
@@ -93,13 +101,15 @@ router.post("/payment/verify", requireAuth, async (req, res) => {
     return;
   }
 
-  const existing = await db
+  const txRef = `${chain}:${txHash}`;
+
+  const [duplicate] = await db
     .select()
     .from(voicePurchasesTable)
-    .where(and(eq(voicePurchasesTable.buyerUserId, userId!), eq(voicePurchasesTable.creatorId, creatorId)));
+    .where(eq(voicePurchasesTable.txRef, txRef));
 
-  if (existing.length > 0) {
-    res.json({ success: true, alreadyPurchased: true });
+  if (duplicate) {
+    res.status(400).json({ error: "This transaction has already been used." });
     return;
   }
 
@@ -119,12 +129,13 @@ router.post("/payment/verify", requireAuth, async (req, res) => {
     buyerUserId: userId!,
     creatorId,
     flwTransactionId: txHash,
-    txRef: `${chain}:${txHash}`,
+    txRef,
     amountPaid: creator.pricePerGeneration,
+    generationsRemaining: 3,
     status: "paid",
   });
 
-  res.json({ success: true });
+  res.json({ success: true, generationsRemaining: 3 });
 });
 
 router.get("/payment/check/:creatorId", requireAuth, async (req, res) => {
@@ -142,7 +153,9 @@ router.get("/payment/check/:creatorId", requireAuth, async (req, res) => {
     .from(voicePurchasesTable)
     .where(and(eq(voicePurchasesTable.buyerUserId, userId!), eq(voicePurchasesTable.creatorId, creatorId)));
 
-  res.json({ purchased: rows.length > 0, pricePerGeneration: creator.pricePerGeneration });
+  const generationsRemaining = rows.reduce((sum, r) => sum + r.generationsRemaining, 0);
+
+  res.json({ purchased: generationsRemaining > 0, generationsRemaining, pricePerGeneration: creator.pricePerGeneration });
 });
 
 export default router;
