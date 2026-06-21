@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { SignIn, SignUp } from "@clerk/react";
+import { SignIn, SignUp, useUser } from "@clerk/react";
 import { useState, useEffect } from "react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -14,9 +14,29 @@ const clerkAppearance = {
   },
 };
 
+function FormSkeleton() {
+  return (
+    <div className="w-full space-y-3 animate-pulse">
+      <div className="h-11 bg-white/5 rounded-md" />
+      <div className="h-11 bg-white/5 rounded-md" />
+      <div className="h-11 bg-white/5 rounded-md" />
+      <div className="h-11 bg-primary/30 rounded-md mt-2" />
+      <div className="flex items-center gap-3 py-1">
+        <div className="h-px flex-1 bg-white/10" />
+        <div className="h-3 w-16 bg-white/10 rounded" />
+        <div className="h-px flex-1 bg-white/10" />
+      </div>
+      <div className="h-11 bg-white/5 rounded-md" />
+      <div className="h-11 bg-white/5 rounded-md" />
+      <div className="h-3 w-40 bg-white/10 rounded mx-auto mt-2" />
+    </div>
+  );
+}
+
 export default function AuthPage() {
   const [location] = useLocation();
   const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const { isLoaded } = useUser();
 
   useEffect(() => {
     if (window.location.hash === "#signin") {
@@ -42,21 +62,24 @@ export default function AuthPage() {
         </div>
 
         <div className="w-full">
-          {mode === "signin" ? (
-            <SignIn
-              routing="hash"
-              fallbackRedirectUrl={`${basePath}/create`}
-              signUpUrl={`${basePath}/auth#signup`}
-              appearance={clerkAppearance}
-            />
-          ) : (
-            <SignUp
-              routing="hash"
-              fallbackRedirectUrl={`${basePath}/onboarding`}
-              signInUrl={`${basePath}/auth#signin`}
-              appearance={clerkAppearance}
-            />
-          )}
+          {!isLoaded && <FormSkeleton />}
+          <div className={isLoaded ? "block" : "hidden"}>
+            {mode === "signin" ? (
+              <SignIn
+                routing="hash"
+                fallbackRedirectUrl={`${basePath}/create`}
+                signUpUrl={`${basePath}/auth#signup`}
+                appearance={clerkAppearance}
+              />
+            ) : (
+              <SignUp
+                routing="hash"
+                fallbackRedirectUrl={`${basePath}/onboarding`}
+                signInUrl={`${basePath}/auth#signin`}
+                appearance={clerkAppearance}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
