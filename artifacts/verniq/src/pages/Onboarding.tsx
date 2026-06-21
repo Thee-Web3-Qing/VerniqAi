@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useUpdateMyProfile, useTranscribeAudio, useAnalyseVoice } from "@workspace/api-client-react";
-import type { AnalysisStep, VoiceDNA } from "@workspace/api-client-react";
+import type { AnalysisStep, VoiceDNA, Language } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, CheckCircle, Sparkles } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -15,8 +15,40 @@ const PRE_STEPS = [
   { id: "map",     emoji: "🧠", label: "Mapping 8 dimensions" },
 ];
 
-// Index of the last pre-step that shows the long progress bar
 const MAP_STEP_IDX = PRE_STEPS.length - 1;
+
+const LANGUAGES: { code: Language; label: string; native: string }[] = [
+  { code: "english",   label: "English",   native: "English"    },
+  { code: "hindi",     label: "Hindi",     native: "हिन्दी"     },
+  { code: "bengali",   label: "Bengali",   native: "বাংলা"      },
+  { code: "tamil",     label: "Tamil",     native: "தமிழ்"      },
+  { code: "telugu",    label: "Telugu",    native: "తెలుగు"     },
+  { code: "kannada",   label: "Kannada",   native: "ಕನ್ನಡ"      },
+  { code: "malayalam", label: "Malayalam", native: "മലയാളം"     },
+  { code: "marathi",   label: "Marathi",   native: "मराठी"      },
+  { code: "gujarati",  label: "Gujarati",  native: "ગુજરાતી"    },
+  { code: "punjabi",   label: "Punjabi",   native: "ਪੰਜਾਬੀ"     },
+  { code: "odia",      label: "Odia",      native: "ଓଡ଼ିଆ"      },
+];
+
+function SpinnerIcon() {
+  return (
+    <motion.div
+      animate={{ rotate: 360 }}
+      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+      className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full flex-shrink-0"
+    />
+  );
+}
+
+function Trait({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-muted-foreground uppercase tracking-widest text-[10px]">{label}</span>
+      <span className="text-foreground font-bold capitalize truncate">{value}</span>
+    </div>
+  );
+}
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
@@ -26,6 +58,7 @@ export default function Onboarding() {
   const [audioTranscript, setAudioTranscript] = useState("");
   const [transcriptReady, setTranscriptReady] = useState(false);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>("english");
 
   const [stage, setStage] = useState<Stage>("input");
   const [activePreStep, setActivePreStep] = useState(0);
@@ -36,7 +69,6 @@ export default function Onboarding() {
   const [voiceDna, setVoiceDna] = useState<VoiceDNA | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [showDna, setShowDna] = useState(false);
-  // Progress bar for "Mapping 8 dimensions" — fake linear fill while API is in flight
   const [mapBarPct, setMapBarPct] = useState(0);
   const mapBarIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -48,7 +80,6 @@ export default function Onboarding() {
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
 
-  // Animate pre-steps while in "analysing" stage
   useEffect(() => {
     if (stage !== "analysing") return;
     let idx = 0;
@@ -59,15 +90,11 @@ export default function Onboarding() {
       if (idx < PRE_STEPS.length) {
         setDonePreSteps((prev) => new Set([...prev, PRE_STEPS[idx - 1].id]));
         setActivePreStep(idx);
-        // Start the map bar when last pre-step becomes active
         if (idx === MAP_STEP_IDX) {
           if (mapBarIntervalRef.current) clearInterval(mapBarIntervalRef.current);
           mapBarIntervalRef.current = setInterval(() => {
             setMapBarPct((p) => {
-              if (p >= 90) {
-                clearInterval(mapBarIntervalRef.current!);
-                return 90;
-              }
+              if (p >= 90) { clearInterval(mapBarIntervalRef.current!); return 90; }
               return p + 0.25;
             });
           }, 100);
@@ -79,7 +106,6 @@ export default function Onboarding() {
     return () => clearInterval(interval);
   }, [stage]);
 
-  // Complete the map bar when API returns
   useEffect(() => {
     if (stage === "review" || stage === "saving") {
       if (mapBarIntervalRef.current) clearInterval(mapBarIntervalRef.current);
@@ -154,14 +180,12 @@ export default function Onboarding() {
       { data: { text: textToAnalyse, audioDurationSeconds: mode === "video" ? audioDuration : undefined } },
       {
         onSuccess: async (result) => {
-          // Complete all pre-steps instantly
           setDonePreSteps(new Set(PRE_STEPS.map((s) => s.id)));
           setActivePreStep(-1);
           setAnalysisSteps(result.steps as AnalysisStep[]);
           setVoiceDna(result.voiceDna as VoiceDNA);
           setStage("review");
 
-          // Reveal each step one by one
           for (let i = 0; i < result.steps.length; i++) {
             setActiveStepIdx(i);
             await new Promise((r) => setTimeout(r, 120));
@@ -169,8 +193,6 @@ export default function Onboarding() {
             await new Promise((r) => setTimeout(r, 380));
           }
           setActiveStepIdx(null);
-
-          // Show DNA card
           await new Promise((r) => setTimeout(r, 300));
           setShowDna(true);
         },
@@ -196,16 +218,15 @@ export default function Onboarding() {
       lastUpdated: new Date().toISOString(),
     };
     updateProfile.mutate(
-      { data: { voice_dna: dnaWithMeta } },
+      { data: { voice_dna: dnaWithMeta, language: selectedLanguage } },
       { onSuccess: () => setLocation("/create") }
     );
   };
 
-  // ── ANALYSING / REVIEW STAGE — live log panel ─────────────────────────────
+  // ── ANALYSING / REVIEW / SAVING STAGE ─────────────────────────────────────
   if (stage === "analysing" || stage === "review" || stage === "saving") {
     return (
       <div className="min-h-screen flex flex-col px-4 py-8 max-w-2xl mx-auto">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-7 h-7 bg-primary flex items-center justify-center flex-shrink-0">
             <span className="text-xs font-black text-primary-foreground">V</span>
@@ -218,9 +239,7 @@ export default function Onboarding() {
           </span>
         </div>
 
-        {/* Terminal panel */}
         <div className="border border-border bg-card flex-1 overflow-hidden">
-          {/* Terminal title bar */}
           <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-background/60">
             <div className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
             <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
@@ -229,42 +248,26 @@ export default function Onboarding() {
           </div>
 
           <div className="p-5 space-y-1 font-mono text-sm">
-            {/* Pre-steps */}
             {PRE_STEPS.map((step, i) => {
               const isDone = donePreSteps.has(step.id);
               const isActive = activePreStep === i && stage === "analysing";
               const isVisible = isDone || isActive || i < activePreStep;
               const isMapStep = i === MAP_STEP_IDX;
-
               if (!isVisible) return null;
-
               return (
                 <motion.div key={step.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25 }}>
                   <div className="flex items-center gap-3 py-1">
-                    {isDone ? (
-                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                    ) : (
-                      <SpinnerIcon />
-                    )}
-                    <span className={isDone ? "text-muted-foreground" : "text-foreground"}>
-                      {step.emoji} {step.label}
-                    </span>
+                    {isDone ? <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" /> : <SpinnerIcon />}
+                    <span className={isDone ? "text-muted-foreground" : "text-foreground"}>{step.emoji} {step.label}</span>
                     {isDone && <span className="text-green-500 text-xs ml-auto">done</span>}
                   </div>
-                  {/* Progress bar — only on the "Mapping 8 dimensions" step while active or completing */}
                   {isMapStep && (isActive || (isDone && mapBarPct > 0)) && (
                     <div className="pl-7 pb-2">
                       <div className="h-0.5 bg-border overflow-hidden w-full mt-1">
-                        <motion.div
-                          className="h-full bg-primary"
-                          style={{ width: `${mapBarPct}%` }}
-                          transition={{ duration: 0.2 }}
-                        />
+                        <motion.div className="h-full bg-primary" style={{ width: `${mapBarPct}%` }} transition={{ duration: 0.2 }} />
                       </div>
                       <div className="flex justify-between mt-1">
-                        <span className="text-xs text-muted-foreground/60">
-                          {isDone ? "Analysis complete" : "Qwen AI analysing..."}
-                        </span>
+                        <span className="text-xs text-muted-foreground/60">{isDone ? "Analysis complete" : "Qwen AI analysing..."}</span>
                         <span className="text-xs text-primary font-mono">{Math.round(mapBarPct)}%</span>
                       </div>
                     </div>
@@ -273,18 +276,12 @@ export default function Onboarding() {
               );
             })}
 
-            {/* Separator after pre-steps complete */}
             {(stage === "review" || stage === "saving") && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="border-t border-border/50 my-3"
-              />
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-t border-border/50 my-3" />
             )}
 
-            {/* Actual dimension steps */}
             <AnimatePresence>
-              {visibleSteps.map((step, i) => (
+              {visibleSteps.map((step) => (
                 <motion.div
                   key={step.category}
                   initial={{ opacity: 0, x: -8 }}
@@ -296,38 +293,25 @@ export default function Onboarding() {
                     <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="text-muted-foreground text-xs uppercase tracking-widest">
-                          {step.emoji} {step.category}
-                        </span>
-                        <span className="text-primary font-bold text-xs text-right">
-                          {step.value}
-                        </span>
+                        <span className="text-muted-foreground text-xs uppercase tracking-widest">{step.emoji} {step.category}</span>
+                        <span className="text-primary font-bold text-xs text-right">{step.value}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground/70 mt-0.5 leading-relaxed">
-                        {step.reasoning}
-                      </p>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5 leading-relaxed">{step.reasoning}</p>
                     </div>
                   </div>
                 </motion.div>
               ))}
             </AnimatePresence>
 
-            {/* Currently analysing step */}
             {activeStepIdx !== null && (
-              <motion.div
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-3 py-1.5"
-              >
+              <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3 py-1.5">
                 <SpinnerIcon />
                 <span className="text-foreground text-xs">
-                  {analysisSteps[activeStepIdx]?.emoji}{" "}
-                  Analysing {analysisSteps[activeStepIdx]?.category}...
+                  {analysisSteps[activeStepIdx]?.emoji} Analysing {analysisSteps[activeStepIdx]?.category}...
                 </span>
               </motion.div>
             )}
 
-            {/* Blinking cursor while loading */}
             {stage === "analysing" && activeStepIdx === null && (
               <div className="flex items-center gap-3 py-1">
                 <SpinnerIcon />
@@ -337,7 +321,6 @@ export default function Onboarding() {
           </div>
         </div>
 
-        {/* Completion banner + DNA card */}
         <AnimatePresence>
           {showDna && voiceDna && (
             <motion.div
@@ -346,7 +329,6 @@ export default function Onboarding() {
               transition={{ duration: 0.5 }}
               className="mt-4 space-y-4"
             >
-              {/* Pipeline complete banner */}
               <div className="border border-primary bg-primary/5 px-4 py-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-primary" />
@@ -354,19 +336,19 @@ export default function Onboarding() {
                     Analysis complete · {visibleSteps.length} dimensions mapped
                   </span>
                 </div>
+                {selectedLanguage !== "english" && (
+                  <span className="text-xs font-mono text-primary border border-primary/30 bg-primary/10 px-2 py-0.5">
+                    {LANGUAGES.find(l => l.code === selectedLanguage)?.native}
+                  </span>
+                )}
               </div>
 
-              {/* DNA summary */}
               <div className="border border-border bg-card p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">
-                    Voice DNA Signature
-                  </span>
+                  <span className="text-xs font-mono font-bold text-primary uppercase tracking-widest">Voice DNA Signature</span>
                 </div>
-                <p className="text-sm font-sans italic mb-4 text-foreground leading-relaxed">
-                  "{voiceDna.summary}"
-                </p>
+                <p className="text-sm font-sans italic mb-4 text-foreground leading-relaxed">"{voiceDna.summary}"</p>
                 <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                   <Trait label="Tone" value={voiceDna.tone} />
                   <Trait label="Energy" value={voiceDna.energy} />
@@ -381,7 +363,6 @@ export default function Onboarding() {
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3 items-center">
                 <button
                   onClick={() => { setStage("input"); setVisibleSteps([]); setShowDna(false); }}
@@ -420,7 +401,7 @@ export default function Onboarding() {
         </div>
       </div>
 
-      <header className="mb-10">
+      <header className="mb-8">
         <h1 className="text-4xl font-black font-sans mb-3">Build your Voice DNA</h1>
         <p className="text-muted-foreground text-lg max-w-xl">
           Give Verniq your content. Qwen AI will map your exact voice signature across 8 dimensions.
@@ -432,6 +413,33 @@ export default function Onboarding() {
           {analysisError}
         </div>
       )}
+
+      {/* Language selector */}
+      <div className="mb-8">
+        <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-3">
+          Content Language
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {LANGUAGES.map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => setSelectedLanguage(lang.code)}
+              className={`px-3 py-1.5 border text-sm font-mono rounded-none transition-all ${
+                selectedLanguage === lang.code
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border hover:border-primary/50 text-muted-foreground"
+              }`}
+            >
+              {lang.native}
+            </button>
+          ))}
+        </div>
+        {selectedLanguage !== "english" && (
+          <p className="text-xs font-mono text-primary mt-2">
+            ✓ All generated content will be in {LANGUAGES.find(l => l.code === selectedLanguage)?.label}
+          </p>
+        )}
+      </div>
 
       <div className="border border-border overflow-hidden mb-8">
         {/* Mode tabs */}
@@ -539,25 +547,6 @@ export default function Onboarding() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function SpinnerIcon() {
-  return (
-    <motion.div
-      animate={{ rotate: 360 }}
-      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-      className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full flex-shrink-0"
-    />
-  );
-}
-
-function Trait({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-background/50 p-2.5">
-      <div className="text-muted-foreground text-xs mb-0.5">{label}</div>
-      <div className="font-bold text-foreground capitalize text-xs">{value}</div>
     </div>
   );
 }

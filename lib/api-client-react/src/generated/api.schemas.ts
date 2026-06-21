@@ -49,6 +49,19 @@ export interface PaymentInfo {
   creatorId: string;
 }
 
+export type Language =
+  | 'english'
+  | 'hindi'
+  | 'bengali'
+  | 'tamil'
+  | 'telugu'
+  | 'kannada'
+  | 'malayalam'
+  | 'marathi'
+  | 'gujarati'
+  | 'punjabi'
+  | 'odia';
+
 export interface Profile {
   id: string;
   /** @nullable */
@@ -61,6 +74,11 @@ export interface Profile {
   avatar_url?: string | null;
   is_public_creator: boolean;
   voice_dna?: VoiceDNA | null;
+  /** @nullable */
+  voice_dna_0g_hash?: string | null;
+  /** @nullable */
+  voice_dna_0g_tx?: string | null;
+  language: Language;
   follower_count: number;
   social_connections: SocialConnection[];
   /** @nullable */
@@ -85,6 +103,7 @@ export interface ProfileUpdate {
   /** @nullable */
   wallet_address?: string | null;
   price_per_generation?: number;
+  language?: Language;
 }
 
 export interface Draft {
@@ -134,6 +153,7 @@ export interface GenerateInput {
   idea: string;
   platform?: ContentPlatform;
   creatorId?: string;
+  orgId?: string;
 }
 
 export interface GenerateResult {
@@ -157,9 +177,58 @@ export interface AnalysisStep {
 export interface AnalyseVoiceInput {
   text: string;
   audioDurationSeconds?: number;
+  language?: Language;
 }
 
 export interface AnalyseVoiceResult {
   steps: AnalysisStep[];
   voiceDna: VoiceDNA;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  owner_id: string;
+  voice_dna?: VoiceDNA | null;
+  /** @nullable */
+  voice_dna_0g_hash?: string | null;
+  invite_code: string;
+  plan: string;
+  members: OrgMemberDto[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrgListItem {
+  id: string;
+  name: string;
+  slug: string;
+  owner_id: string;
+  role: string;
+  voice_dna?: VoiceDNA | null;
+  /** @nullable */
+  voice_dna_0g_hash?: string | null;
+  plan: string;
+  created_at: string;
+}
+
+export interface OrgMemberDto {
+  user_id: string;
+  role: string;
+  /** @nullable */
+  display_name?: string | null;
+}
+
+export interface CreateOrgInput {
+  name: string;
+}
+
+export interface JoinOrgInput {
+  inviteCode: string;
+}
+
+export interface BuildOrgVoiceResult {
+  voice_dna: VoiceDNA;
+  contributor_count: number;
 }

@@ -20,6 +20,9 @@ import History from "@/pages/History";
 import Profile from "@/pages/Profile";
 import Creators from "@/pages/Creators";
 import CreatorProfile from "@/pages/CreatorProfile";
+import OrgNew from "@/pages/OrgNew";
+import OrgDashboard from "@/pages/OrgDashboard";
+import JoinOrg from "@/pages/JoinOrg";
 import { Logo } from "@/components/Logo";
 
 const clerkPubKey = publishableKeyFromHost(
@@ -253,6 +256,9 @@ function Router() {
             <Route path="/results/:id">{() => <ProtectedRoute component={Results} />}</Route>
             <Route path="/history">{() => <ProtectedRoute component={History} />}</Route>
             <Route path="/profile">{() => <ProtectedRoute component={Profile} />}</Route>
+            <Route path="/org/new">{() => <ProtectedRoute component={OrgNew} />}</Route>
+            <Route path="/org/join/:code">{() => <ProtectedRoute component={JoinOrg} />}</Route>
+            <Route path="/org/:slug">{() => <ProtectedRoute component={OrgDashboard} />}</Route>
             <Route component={NotFound} />
           </Switch>
         </Layout>

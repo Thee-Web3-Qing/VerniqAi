@@ -3,6 +3,7 @@ import { getAuth } from "@clerk/express";
 import { db, profilesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
+import { uploadToZeroG } from "../lib/zerog";
 
 const router = Router();
 
@@ -23,6 +24,9 @@ function profileToDto(p: typeof profilesTable.$inferSelect) {
     avatar_url: p.avatarUrl ?? null,
     is_public_creator: p.isPublicCreator,
     voice_dna: (p.voiceDna as Record<string, unknown> | null) ?? null,
+    voice_dna_0g_hash: p.voiceDna0gHash ?? null,
+    voice_dna_0g_tx: p.voiceDna0gTx ?? null,
+    language: p.language ?? "english",
     follower_count: p.followerCount,
     social_connections: socials,
     wallet_address: p.walletAddress ?? null,
@@ -56,6 +60,7 @@ router.put("/profile", requireAuth, async (req, res) => {
     social_connections,
     wallet_address,
     price_per_generation,
+    language,
   } = req.body;
 
   const rows = await db.select().from(profilesTable).where(eq(profilesTable.id, userId!));
@@ -72,9 +77,23 @@ router.put("/profile", requireAuth, async (req, res) => {
         socialConnections: social_connections ?? [],
         walletAddress: wallet_address ?? null,
         pricePerGeneration: price_per_generation ?? 0,
+        language: language ?? "english",
       })
       .returning();
     res.json(profileToDto(inserted[0]));
+
+    if (voice_dna) {
+      uploadToZeroG({ ...voice_dna, _userId: userId, _savedAt: Date.now() })
+        .then(async (result) => {
+          if (result) {
+            await db.update(profilesTable)
+              .set({ voiceDna0gHash: result.hash, voiceDna0gTx: result.tx })
+              .where(eq(profilesTable.id, userId!));
+            console.log(`[0G] Voice DNA stored, hash: ${result.hash}`);
+          }
+        })
+        .catch((err) => console.error("[0G] Background upload error:", err));
+    }
     return;
   }
 
@@ -89,11 +108,25 @@ router.put("/profile", requireAuth, async (req, res) => {
       ...(social_connections !== undefined && { socialConnections: social_connections }),
       ...(wallet_address !== undefined && { walletAddress: wallet_address }),
       ...(price_per_generation !== undefined && { pricePerGeneration: price_per_generation }),
+      ...(language !== undefined && { language }),
     })
     .where(eq(profilesTable.id, userId!))
     .returning();
 
   res.json(profileToDto(updated[0]));
+
+  if (voice_dna !== undefined) {
+    uploadToZeroG({ ...voice_dna, _userId: userId, _savedAt: Date.now() })
+      .then(async (result) => {
+        if (result) {
+          await db.update(profilesTable)
+            .set({ voiceDna0gHash: result.hash, voiceDna0gTx: result.tx })
+            .where(eq(profilesTable.id, userId!));
+          console.log(`[0G] Voice DNA updated on-chain, hash: ${result.hash}`);
+        }
+      })
+      .catch((err) => console.error("[0G] Background upload error:", err));
+  }
 });
 
 export default router;

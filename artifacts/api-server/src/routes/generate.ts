@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
-import { db, profilesTable } from "@workspace/db";
+import { db, profilesTable, organizationsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 const router = Router();
@@ -120,10 +120,11 @@ const PLATFORM_INSTRUCTIONS: Record<Platform, { name: string; format: string; in
 
 router.post("/generate", requireAuth, async (req, res) => {
   const { userId } = getAuth(req);
-  const { idea, platform = "tiktok", creatorId } = req.body as {
+  const { idea, platform = "tiktok", creatorId, orgId } = req.body as {
     idea?: string;
     platform?: Platform;
     creatorId?: string;
+    orgId?: string;
   };
 
   if (!idea?.trim()) {
@@ -141,8 +142,18 @@ router.post("/generate", requireAuth, async (req, res) => {
 
   let dna: VoiceDNA | null = null;
   let paymentInfo: { walletAddress: string; priceUsd: number; creatorName: string; creatorId: string } | null = null;
+  let userLanguage = "english";
 
-  if (creatorId) {
+  if (orgId) {
+    const orgRows = await db.select().from(organizationsTable).where(eq(organizationsTable.id, orgId));
+    if (orgRows.length === 0) {
+      res.status(404).json({ error: "Organization not found" });
+      return;
+    }
+    dna = orgRows[0].voiceDna as VoiceDNA | null;
+    const langRow = await db.select({ language: profilesTable.language }).from(profilesTable).where(eq(profilesTable.id, userId!));
+    userLanguage = langRow[0]?.language ?? "english";
+  } else if (creatorId) {
     const creatorRows = await db.select().from(profilesTable).where(eq(profilesTable.id, creatorId));
     if (creatorRows.length === 0 || !creatorRows[0].isPublicCreator) {
       res.status(404).json({ error: "Creator not found" });
@@ -164,9 +175,13 @@ router.post("/generate", requireAuth, async (req, res) => {
         creatorId: creator.id,
       };
     }
+
+    const langRow = await db.select({ language: profilesTable.language }).from(profilesTable).where(eq(profilesTable.id, userId!));
+    userLanguage = langRow[0]?.language ?? "english";
   } else {
     const rows = await db.select().from(profilesTable).where(eq(profilesTable.id, userId!));
     dna = rows[0]?.voiceDna as VoiceDNA | null;
+    userLanguage = rows[0]?.language ?? "english";
   }
 
   const dnaContext = dna
@@ -185,9 +200,13 @@ router.post("/generate", requireAuth, async (req, res) => {
 - Voice summary: ${dna.summary}`
     : "No Voice DNA — use an engaging, natural creator voice.";
 
+  const languageInstruction = userLanguage !== "english"
+    ? `\nLANGUAGE: Generate ALL content in ${userLanguage}. Every word must be in ${userLanguage} — do not mix languages.`
+    : "";
+
   const systemPrompt = `You are Verniq, a precision AI content engine. You generate ${platformInfo.name} content that sounds EXACTLY like the creator — not generic AI output.
 
-${dnaContext}
+${dnaContext}${languageInstruction}
 
 CRITICAL: Every word must feel like it came from this specific creator. Match their tone, energy, sentence length, and vocabulary precisely.`;
 

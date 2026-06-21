@@ -22,11 +22,16 @@ import type {
 import type {
   AnalyseVoiceInput,
   AnalyseVoiceResult,
+  BuildOrgVoiceResult,
+  CreateOrgInput,
   Draft,
   DraftInput,
   GenerateInput,
   GenerateResult,
   HealthStatus,
+  JoinOrgInput,
+  Organization,
+  OrgListItem,
   Profile,
   ProfileUpdate,
   TranscribeInput,
@@ -880,5 +885,124 @@ export const useGenerateContent = <TError = ErrorType<unknown>, TContext = unkno
   options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof generateContent>>, TError, { data: BodyType<GenerateInput> }, TContext>, request?: SecondParameter<typeof customFetch> }
 ): UseMutationResult<Awaited<ReturnType<typeof generateContent>>, TError, { data: BodyType<GenerateInput> }, TContext> => {
   return useMutation(getGenerateContentMutationOptions(options));
+};
+
+// ---------------------------------------------------------------------------
+// Organizations — B2B Brand Voice
+// ---------------------------------------------------------------------------
+
+export const createOrg = async (
+  data: CreateOrgInput,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<Organization> => {
+  return customFetch<Organization>('/api/orgs', {
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const useCreateOrg = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError, { data: BodyType<CreateOrgInput> }, TContext> }
+): UseMutationResult<Awaited<ReturnType<typeof createOrg>>, TError, { data: BodyType<CreateOrgInput> }, TContext> => {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrg>>, { data: BodyType<CreateOrgInput> }> = (props) => {
+    return createOrg(props.data);
+  };
+  return useMutation({ mutationFn, ...options?.mutation });
+};
+
+export const listMyOrgs = async (
+  options?: SecondParameter<typeof customFetch>,
+): Promise<OrgListItem[]> => {
+  return customFetch<OrgListItem[]>('/api/orgs', {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const useListMyOrgs = (
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listMyOrgs>>, ErrorType<unknown>> }
+): UseQueryResult<OrgListItem[], ErrorType<unknown>> => {
+  const queryKey = ['listMyOrgs'] as const;
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyOrgs>>> = () => listMyOrgs();
+  return useQuery({ queryKey, queryFn, ...options?.query });
+};
+
+export const getOrg = async (
+  slug: string,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<Organization> => {
+  return customFetch<Organization>(`/api/orgs/${slug}`, {
+    ...options,
+    method: 'GET',
+  });
+};
+
+export const useGetOrg = (
+  slug: string,
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getOrg>>, ErrorType<unknown>> }
+): UseQueryResult<Organization, ErrorType<unknown>> => {
+  const queryKey = ['getOrg', slug] as const;
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrg>>> = () => getOrg(slug);
+  return useQuery({ queryKey, queryFn, enabled: !!slug, ...options?.query });
+};
+
+export const joinOrg = async (
+  data: JoinOrgInput,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<{ joined?: boolean; already_member?: boolean; slug: string; name?: string }> => {
+  return customFetch<{ joined?: boolean; already_member?: boolean; slug: string; name?: string }>('/api/orgs/join', {
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const useJoinOrg = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof joinOrg>>, TError, { data: BodyType<JoinOrgInput> }, TContext> }
+): UseMutationResult<Awaited<ReturnType<typeof joinOrg>>, TError, { data: BodyType<JoinOrgInput> }, TContext> => {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof joinOrg>>, { data: BodyType<JoinOrgInput> }> = (props) => {
+    return joinOrg(props.data);
+  };
+  return useMutation({ mutationFn, ...options?.mutation });
+};
+
+export const buildOrgVoice = async (
+  slug: string,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<BuildOrgVoiceResult> => {
+  return customFetch<BuildOrgVoiceResult>(`/api/orgs/${slug}/build-voice`, {
+    ...options,
+    method: 'POST',
+  });
+};
+
+export const useBuildOrgVoice = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof buildOrgVoice>>, TError, { slug: string }, TContext> }
+): UseMutationResult<Awaited<ReturnType<typeof buildOrgVoice>>, TError, { slug: string }, TContext> => {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof buildOrgVoice>>, { slug: string }> = (props) => {
+    return buildOrgVoice(props.slug);
+  };
+  return useMutation({ mutationFn, ...options?.mutation });
+};
+
+export const removeOrgMember = async (
+  slug: string,
+  memberId: string,
+  options?: SecondParameter<typeof customFetch>,
+): Promise<{ removed: boolean }> => {
+  return customFetch<{ removed: boolean }>(`/api/orgs/${slug}/members/${memberId}`, {
+    ...options,
+    method: 'DELETE',
+  });
+};
+
+export const useRemoveOrgMember = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof removeOrgMember>>, TError, { slug: string; memberId: string }, TContext> }
+): UseMutationResult<Awaited<ReturnType<typeof removeOrgMember>>, TError, { slug: string; memberId: string }, TContext> => {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeOrgMember>>, { slug: string; memberId: string }> = (props) => {
+    return removeOrgMember(props.slug, props.memberId);
+  };
+  return useMutation({ mutationFn, ...options?.mutation });
 };
 
