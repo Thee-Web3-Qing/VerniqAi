@@ -364,9 +364,26 @@ export default function Profile() {
                 <div>
                   <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">Blockchain</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {([ ["bsc", "BSC (BNB Smart Chain)"], ["eth", "Ethereum"], ["polygon", "Polygon"], ["tron", "Tron"] ] as [string,string][]).map(([id, label]) => (
+                    {([
+                      ["bsc",      "BSC (BNB Smart Chain)"],
+                      ["eth",      "Ethereum"],
+                      ["polygon",  "Polygon"],
+                      ["optimism", "Optimism"],
+                      ["base",     "Base"],
+                      ["tron",     "Tron"],
+                      ["solana",   "Solana"],
+                      ["ton",      "TON"],
+                    ] as [string,string][]).map(([id, label]) => (
                       <button key={id} type="button"
-                        onClick={() => { setWalletChain(id); setWalletToken(id === "tron" ? "USDT" : id === "eth" ? "USDT" : id === "polygon" ? "USDT" : "USDT"); }}
+                        onClick={() => {
+                          setWalletChain(id);
+                          const defaults: Record<string, string> = {
+                            bsc: "USDT", eth: "USDT", polygon: "USDT",
+                            optimism: "USDT", base: "USDT",
+                            tron: "USDT", solana: "USDC", ton: "TON",
+                          };
+                          setWalletToken(defaults[id] ?? "USDT");
+                        }}
                         className={`p-2.5 border text-left text-xs font-mono transition-colors rounded-none ${walletChain === id ? "border-primary bg-primary/10 text-primary font-bold" : "border-border text-muted-foreground hover:border-primary/50"}`}>
                         {label}
                       </button>
@@ -376,10 +393,16 @@ export default function Profile() {
                 <div>
                   <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">Token</label>
                   <div className="flex gap-2 flex-wrap">
-                    {(walletChain === "bsc" ? ["USDT", "USDC", "BNB"]
-                      : walletChain === "eth" ? ["USDT", "USDC", "ETH"]
-                      : walletChain === "polygon" ? ["USDT", "USDC", "POL"]
-                      : ["USDT", "USDC", "TRX"]).map(t => (
+                    {({
+                      bsc:      ["USDT", "USDC", "BNB"],
+                      eth:      ["USDT", "USDC", "ETH"],
+                      polygon:  ["USDT", "USDC", "POL"],
+                      optimism: ["USDT", "USDC", "ETH"],
+                      base:     ["USDT", "USDC", "ETH"],
+                      tron:     ["USDT", "USDC", "TRX"],
+                      solana:   ["USDT", "USDC", "SOL"],
+                      ton:      ["TON", "USDT"],
+                    }[walletChain] ?? ["USDT", "USDC"]).map(t => (
                       <button key={t} type="button" onClick={() => setWalletToken(t)}
                         className={`px-3 py-2 border text-xs font-mono transition-colors rounded-none ${walletToken === t ? "border-primary bg-primary/10 text-primary font-bold" : "border-border text-muted-foreground hover:border-primary/50"}`}>
                         {t}
@@ -482,10 +505,14 @@ export default function Profile() {
                     {sales.map((s: VoiceSale) => {
                       const chain = s.chain ?? "—";
                       const explorerBase: Record<string, string> = {
-                        eth: "https://etherscan.io/tx/",
-                        polygon: "https://polygonscan.com/tx/",
-                        bsc: "https://bscscan.com/tx/",
-                        tron: "https://tronscan.org/#/transaction/",
+                        eth:      "https://etherscan.io/tx/",
+                        polygon:  "https://polygonscan.com/tx/",
+                        bsc:      "https://bscscan.com/tx/",
+                        optimism: "https://optimistic.etherscan.io/tx/",
+                        base:     "https://basescan.org/tx/",
+                        tron:     "https://tronscan.org/#/transaction/",
+                        solana:   "https://solscan.io/tx/",
+                        ton:      "https://tonscan.org/tx/",
                       };
                       const explorerUrl = s.tx_hash && explorerBase[chain]
                         ? `${explorerBase[chain]}${s.tx_hash}`

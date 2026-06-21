@@ -6,16 +6,20 @@ import { eq, and, desc } from "drizzle-orm";
 
 const router = Router();
 
-type Chain = "bsc" | "eth" | "polygon" | "tron";
+type EvmChain = "bsc" | "eth" | "polygon" | "optimism" | "base";
+type Chain = EvmChain | "tron" | "solana" | "ton";
 
-function alchemyRpc(chain: Exclude<Chain, "tron">): string {
-  const key = process.env.ALCHEMY_API_KEY ?? "";
-  const slugs: Record<Exclude<Chain, "tron">, string> = {
-    eth: "eth-mainnet",
-    polygon: "polygon-mainnet",
-    bsc: "bnb-mainnet",
-  };
-  return `https://${slugs[chain]}.g.alchemy.com/v2/${key}`;
+const ALCHEMY_SLUGS: Record<EvmChain | "solana", string> = {
+  eth:      "eth-mainnet",
+  polygon:  "polygon-mainnet",
+  bsc:      "bnb-mainnet",
+  optimism: "opt-mainnet",
+  base:     "base-mainnet",
+  solana:   "solana-mainnet",
+};
+
+function alchemyRpc(chain: EvmChain | "solana"): string {
+  return `https://${ALCHEMY_SLUGS[chain]}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY ?? ""}`;
 }
 
 type TronTx = {
@@ -26,6 +30,7 @@ type TronResp = { data?: TronTx[] };
 
 async function verifyOnChain(txHash: string, creatorWallet: string, chain: Chain): Promise<boolean> {
   try {
+    // ── Tron ───────────────────────────────────────────────────────────────────
     if (chain === "tron") {
       const res = await fetch(`https://api.trongrid.io/v1/transactions/${txHash}`, {
         headers: { Accept: "application/json" },
@@ -38,7 +43,52 @@ async function verifyOnChain(txHash: string, creatorWallet: string, chain: Chain
       return confirmed && toAddr.toLowerCase().includes(creatorWallet.replace("0x", "").toLowerCase());
     }
 
-    const rpc = alchemyRpc(chain as Exclude<Chain, "tron">);
+    // ── Solana ─────────────────────────────────────────────────────────────────
+    if (chain === "solana") {
+      const rpc = alchemyRpc("solana");
+      const res = await fetch(rpc, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 1, method: "getTransaction",
+          params: [txHash, { encoding: "json", maxSupportedTransactionVersion: 0 }],
+        }),
+      });
+      const data = (await res.json()) as {
+        result?: {
+          meta?: { err: unknown };
+          transaction?: { message?: { accountKeys?: string[] } };
+        };
+      };
+      const result = data.result;
+      if (!result || result.meta?.err !== null) return false;
+      const keys = result.transaction?.message?.accountKeys ?? [];
+      return keys.some((k) => k.toLowerCase() === creatorWallet.toLowerCase());
+    }
+
+    // ── TON ────────────────────────────────────────────────────────────────────
+    if (chain === "ton") {
+      const res = await fetch(
+        `https://tonapi.io/v2/blockchain/transactions/${encodeURIComponent(txHash)}`,
+        { headers: { Accept: "application/json" } },
+      );
+      if (!res.ok) return false;
+      const data = (await res.json()) as {
+        success?: boolean;
+        in_msg?: { destination?: { address?: string } };
+        out_msgs?: Array<{ destination?: { address?: string } }>;
+      };
+      if (!data.success) return false;
+      const creatorLower = creatorWallet.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const addrs = [
+        data.in_msg?.destination?.address ?? "",
+        ...(data.out_msgs ?? []).map((m) => m.destination?.address ?? ""),
+      ].map((a) => a.toLowerCase().replace(/[^a-z0-9]/g, ""));
+      return addrs.some((a) => a.includes(creatorLower) || creatorLower.includes(a.slice(-32)));
+    }
+
+    // ── EVM (ETH / Polygon / BSC / Optimism / Base) ────────────────────────────
+    const rpc = alchemyRpc(chain as EvmChain);
     const txRes = await fetch(rpc, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

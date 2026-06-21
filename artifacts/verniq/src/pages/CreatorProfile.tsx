@@ -12,17 +12,25 @@ const PLATFORM_ICONS: Record<string, string> = {
 };
 
 const CHAIN_LABELS: Record<string, string> = {
-  bsc: "BNB Smart Chain (BSC)",
-  eth: "Ethereum",
-  polygon: "Polygon",
-  tron: "Tron",
+  bsc:      "BNB Smart Chain (BSC)",
+  eth:      "Ethereum",
+  polygon:  "Polygon",
+  optimism: "Optimism",
+  base:     "Base",
+  tron:     "Tron",
+  solana:   "Solana",
+  ton:      "TON",
 };
 
 const TOKEN_STANDARDS: Record<string, Record<string, string>> = {
-  bsc:     { USDT: "USDT (BEP-20)", USDC: "USDC (BEP-20)", BNB: "BNB" },
-  eth:     { USDT: "USDT (ERC-20)", USDC: "USDC (ERC-20)", ETH: "ETH" },
-  polygon: { USDT: "USDT (Polygon)", USDC: "USDC (Polygon)", POL: "POL (MATIC)" },
-  tron:    { USDT: "USDT (TRC-20)", USDC: "USDC (TRC-20)", TRX: "TRX" },
+  bsc:      { USDT: "USDT (BEP-20)",    USDC: "USDC (BEP-20)",    BNB: "BNB"      },
+  eth:      { USDT: "USDT (ERC-20)",    USDC: "USDC (ERC-20)",    ETH: "ETH"      },
+  polygon:  { USDT: "USDT (Polygon)",   USDC: "USDC (Polygon)",   POL: "POL"      },
+  optimism: { USDT: "USDT (Optimism)",  USDC: "USDC (Optimism)",  ETH: "ETH"      },
+  base:     { USDT: "USDT (Base)",      USDC: "USDC (Base)",      ETH: "ETH"      },
+  tron:     { USDT: "USDT (TRC-20)",    USDC: "USDC (TRC-20)",    TRX: "TRX"      },
+  solana:   { USDT: "USDT (Solana)",    USDC: "USDC (Solana)",    SOL: "SOL"      },
+  ton:      { TON:  "TON",              USDT: "USDT (TON)"                         },
 };
 
 
