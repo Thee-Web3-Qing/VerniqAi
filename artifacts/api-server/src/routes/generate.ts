@@ -185,30 +185,33 @@ router.post("/generate", requireAuth, async (req, res) => {
   }
 
   const dnaContext = dna
-    ? `CREATOR'S VOICE DNA:
+    ? `CREATOR'S VOICE DNA (study the STYLE — never copy their words):
 - Tone: ${dna.tone}
-- Energy: ${dna.energy}  
+- Energy: ${dna.energy}
 - Hook style: ${dna.hookStyle}
 - Closing style: ${dna.closingStyle}
 - Formality (1–10): ${dna.formalityScore}
-- Avg sentence length: ${Math.round(dna.avgSentenceLength)} words
+- Avg sentence length: ~${Math.round(dna.avgSentenceLength)} words — MATCH THIS LENGTH per sentence
 - Emotions: ${dna.emotions ?? "not specified"}
 - Charisma: ${dna.charisma ?? "not specified"}
 - Pacing: ${dna.pacing ?? "not specified"}
 - Content style: ${dna.contentStyle ?? "not specified"}
-- Signature phrases: ${dna.signaturePhrases.length > 0 ? dna.signaturePhrases.join(", ") : "none recorded"}
+- Phrase patterns (DO NOT quote these verbatim — mimic the PATTERN and cadence only): ${dna.signaturePhrases.length > 0 ? dna.signaturePhrases.join(", ") : "none"}
 - Voice summary: ${dna.summary}`
-    : "No Voice DNA — use an engaging, natural creator voice.";
+    : "No Voice DNA — write in a natural, engaging, conversational voice.";
 
   const languageInstruction = userLanguage !== "english"
-    ? `\nLANGUAGE: Generate ALL content in ${userLanguage}. Every word must be in ${userLanguage} — do not mix languages.`
+    ? `\nLANGUAGE: Write ALL content in ${userLanguage}. Every single word must be in ${userLanguage} — do not mix languages.`
     : "";
 
-  const systemPrompt = `You are Verniq, a precision AI content engine. You generate ${platformInfo.name} content that sounds EXACTLY like the creator — not generic AI output.
+  const systemPrompt = `You are Verniq, a precision AI content engine. You write ${platformInfo.name} content that sounds EXACTLY like this specific creator — not like generic AI.
 
 ${dnaContext}${languageInstruction}
 
-CRITICAL: Every word must feel like it came from this specific creator. Match their tone, energy, sentence length, and vocabulary precisely.`;
+ABSOLUTE RULES — NEVER BREAK THESE:
+1. ZERO WORD LIFTING: You must NOT copy, quote, reuse, or echo any specific words, phrases, or sentences from the creator's samples. The samples teach you HOW they communicate — their rhythm, tone, and attitude. You generate 100% fresh, original content on the new topic.
+2. FULL SENTENCES ONLY: Every single line of content must be a complete, grammatically correct sentence with a subject and a verb. No 3-word fragments. No dangling phrases. No incomplete thoughts. If a sentence feels short, complete it properly.
+3. VOICE MATCHING: Capture their tone, energy, sentence rhythm, and emotional register — through the structure and attitude of your writing, not by repeating their words.`;
 
   const userPrompt = `Generate ${platformInfo.name} content for this idea: "${idea}"
 
