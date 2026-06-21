@@ -401,11 +401,28 @@ export default function Profile() {
                 <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">Price per Generation (USD)</label>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-mono text-muted-foreground">$</span>
-                  <input type="number" value={(pricePerGen / 100).toFixed(2)}
-                    onChange={(e) => { const val = Math.round(parseFloat(e.target.value || "0") * 100); setPricePerGen(Math.max(10, Math.min(1000, val))); }}
-                    step="0.10" min="0.10" max="10.00"
-                    className="w-36 bg-background border border-border p-3 text-sm focus:outline-none focus:border-primary rounded-none font-mono" />
-                  <span className="text-xs font-mono text-muted-foreground">per content piece</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={priceStr}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9.]/g, "");
+                      setPriceStr(raw);
+                    }}
+                    onBlur={() => {
+                      const parsed = parseFloat(priceStr);
+                      if (!isNaN(parsed) && parsed >= 0.10) {
+                        const clamped = Math.min(10, Math.max(0.10, parsed));
+                        setPriceStr(clamped.toFixed(2));
+                        setPricePerGen(Math.round(clamped * 100));
+                      } else {
+                        setPriceStr((pricePerGen / 100).toFixed(2));
+                      }
+                    }}
+                    placeholder="0.50"
+                    className="w-36 bg-background border border-border p-3 text-sm focus:outline-none focus:border-primary rounded-none font-mono"
+                  />
+                  <span className="text-xs font-mono text-muted-foreground">per 3 generations · min $0.10 · max $10.00</span>
                 </div>
               </div>
 
