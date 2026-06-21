@@ -29,12 +29,11 @@ import type {
   GenerateInput,
   GenerateResult,
   HealthStatus,
-  InitiatePaymentInput,
   JoinOrgInput,
   Organization,
   OrgListItem,
   PaymentCheckResult,
-  PaymentInitResult,
+  PaymentInfoResult,
   PaymentVerifyResult,
   Profile,
   ProfileUpdate,
@@ -1071,25 +1070,21 @@ export const useLikeFeedPost = <TError = ErrorType<unknown>, TContext = unknown>
 
 // ─── Payments ─────────────────────────────────────────────────────────────────
 
-export const initiateVoicePayment = async (
-  input: InitiatePaymentInput,
+export const getPaymentInfoQueryKey = (creatorId: string) => ['/api/payment/info', creatorId] as const;
+
+export const getPaymentInfo = async (
+  creatorId: string,
   options?: SecondParameter<typeof customFetch>,
-): Promise<PaymentInitResult> => {
-  return customFetch<PaymentInitResult>('/api/payment/initiate', {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+): Promise<PaymentInfoResult> => {
+  return customFetch<PaymentInfoResult>(`/api/payment/info/${encodeURIComponent(creatorId)}`, { ...options, method: 'GET' });
 };
 
-export const useInitiateVoicePayment = <TError = ErrorType<unknown>, TContext = unknown>(
-  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof initiateVoicePayment>>, TError, InitiatePaymentInput, TContext> }
-): UseMutationResult<Awaited<ReturnType<typeof initiateVoicePayment>>, TError, InitiatePaymentInput, TContext> => {
-  const mutationFn: MutationFunction<Awaited<ReturnType<typeof initiateVoicePayment>>, InitiatePaymentInput> = (vars) => {
-    return initiateVoicePayment(vars);
-  };
-  return useMutation({ mutationFn, ...options?.mutation });
+export const useGetPaymentInfo = <TData = PaymentInfoResult, TError = ErrorType<unknown>>(
+  creatorId: string,
+  options?: { query?: UseQueryOptions<PaymentInfoResult, TError, TData> }
+): UseQueryResult<TData, TError> => {
+  const queryFn: QueryFunction<PaymentInfoResult> = () => getPaymentInfo(creatorId);
+  return useQuery({ queryKey: getPaymentInfoQueryKey(creatorId), queryFn, enabled: !!creatorId, ...options?.query });
 };
 
 export const verifyVoicePayment = async (

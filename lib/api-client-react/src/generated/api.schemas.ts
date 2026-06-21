@@ -49,11 +49,12 @@ export interface PaymentInfo {
   creatorId: string;
 }
 
-export interface PaymentInitResult {
-  paymentLink?: string;
-  txRef?: string;
+export interface PaymentInfoResult {
+  free?: boolean;
   alreadyPurchased?: boolean;
-  alreadyFree?: boolean;
+  walletAddress?: string;
+  priceUsd?: number;
+  creatorName?: string;
 }
 
 export interface PaymentVerifyResult {
@@ -66,13 +67,11 @@ export interface PaymentCheckResult {
   pricePerGeneration: number;
 }
 
-export interface InitiatePaymentInput {
-  creatorId: string;
-  callbackUrl: string;
-}
+export type CryptoChain = 'bsc' | 'eth' | 'polygon' | 'tron';
 
 export interface VerifyPaymentInput {
-  transactionId: string | number;
+  txHash: string;
+  chain: CryptoChain;
   creatorId: string;
 }
 
