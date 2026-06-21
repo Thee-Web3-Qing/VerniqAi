@@ -87,6 +87,8 @@ router.get("/payment/info/:creatorId", requireAuth, async (req, res) => {
     free: false,
     generationsRemaining,
     walletAddress: creator.walletAddress,
+    walletChain: creator.walletChain,
+    walletToken: creator.walletToken,
     priceUsd: creator.pricePerGeneration / 100,
     creatorName: creator.displayName ?? "Creator",
   });
@@ -94,10 +96,22 @@ router.get("/payment/info/:creatorId", requireAuth, async (req, res) => {
 
 router.post("/payment/verify", requireAuth, async (req, res) => {
   const { userId } = getAuth(req);
-  const { txHash, chain, creatorId } = req.body as { txHash?: string; chain?: Chain; creatorId?: string };
+  const { txHash, creatorId } = req.body as { txHash?: string; creatorId?: string };
 
-  if (!txHash || !chain || !creatorId) {
-    res.status(400).json({ error: "txHash, chain, and creatorId are required" });
+  if (!txHash || !creatorId) {
+    res.status(400).json({ error: "txHash and creatorId are required" });
+    return;
+  }
+
+  const [creator] = await db.select().from(profilesTable).where(eq(profilesTable.id, creatorId));
+  if (!creator || !creator.walletAddress) {
+    res.status(404).json({ error: "Creator or wallet not found" });
+    return;
+  }
+
+  const chain = creator.walletChain as Chain | null;
+  if (!chain) {
+    res.status(400).json({ error: "Creator hasn't configured a blockchain. Ask them to update their profile." });
     return;
   }
 
@@ -110,12 +124,6 @@ router.post("/payment/verify", requireAuth, async (req, res) => {
 
   if (duplicate) {
     res.status(400).json({ error: "This transaction has already been used." });
-    return;
-  }
-
-  const [creator] = await db.select().from(profilesTable).where(eq(profilesTable.id, creatorId));
-  if (!creator || !creator.walletAddress) {
-    res.status(404).json({ error: "Creator or wallet not found" });
     return;
   }
 
@@ -155,7 +163,13 @@ router.get("/payment/check/:creatorId", requireAuth, async (req, res) => {
 
   const generationsRemaining = rows.reduce((sum, r) => sum + r.generationsRemaining, 0);
 
-  res.json({ purchased: generationsRemaining > 0, generationsRemaining, pricePerGeneration: creator.pricePerGeneration });
+  res.json({
+    purchased: generationsRemaining > 0,
+    generationsRemaining,
+    pricePerGeneration: creator.pricePerGeneration,
+    walletChain: creator.walletChain ?? null,
+    walletToken: creator.walletToken ?? null,
+  });
 });
 
 export default router;

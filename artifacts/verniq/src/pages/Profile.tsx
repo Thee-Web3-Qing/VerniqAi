@@ -49,6 +49,8 @@ export default function Profile() {
 
   const [socialConns, setSocialConns] = useState<SocialConnection[]>([]);
   const [walletAddress, setWalletAddress] = useState("");
+  const [walletChain, setWalletChain] = useState("bsc");
+  const [walletToken, setWalletToken] = useState("USDT");
   const [pricePerGen, setPricePerGen] = useState(50);
   const [creatorSaved, setCreatorSaved] = useState(false);
 
@@ -60,6 +62,8 @@ export default function Profile() {
       setIsPublic(profile.is_public_creator);
       setSocialConns((profile.social_connections as SocialConnection[]) || []);
       setWalletAddress(profile.wallet_address ?? "");
+      setWalletChain(profile.wallet_chain ?? "bsc");
+      setWalletToken(profile.wallet_token ?? "USDT");
       setPricePerGen(profile.price_per_generation || 50);
     }
   }, [profile]);
@@ -93,6 +97,8 @@ export default function Profile() {
         data: {
           social_connections: filteredSocials,
           wallet_address: walletAddress.trim() || null,
+          wallet_chain: walletChain,
+          wallet_token: walletToken,
           price_per_generation: pricePerGen,
           is_public_creator: isPublic,
         },
@@ -351,11 +357,44 @@ export default function Profile() {
 
           {creatorEligible && (
             <div className="space-y-4 border-t border-border pt-6">
-              <div>
-                <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">Wallet Address (any chain)</label>
-                <input type="text" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)}
-                  placeholder="ETH / SOL / USDT TRC-20 / BTC address"
-                  className="w-full bg-background border border-border p-3 text-sm focus:outline-none focus:border-primary rounded-none font-mono" />
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">Blockchain</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([ ["bsc", "BSC (BNB Smart Chain)"], ["eth", "Ethereum"], ["polygon", "Polygon"], ["tron", "Tron"] ] as [string,string][]).map(([id, label]) => (
+                      <button key={id} type="button"
+                        onClick={() => { setWalletChain(id); setWalletToken(id === "tron" ? "USDT" : id === "eth" ? "USDT" : id === "polygon" ? "USDT" : "USDT"); }}
+                        className={`p-2.5 border text-left text-xs font-mono transition-colors rounded-none ${walletChain === id ? "border-primary bg-primary/10 text-primary font-bold" : "border-border text-muted-foreground hover:border-primary/50"}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">Token</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {(walletChain === "bsc" ? ["USDT", "USDC", "BNB"]
+                      : walletChain === "eth" ? ["USDT", "USDC", "ETH"]
+                      : walletChain === "polygon" ? ["USDT", "USDC", "POL"]
+                      : ["USDT", "USDC", "TRX"]).map(t => (
+                      <button key={t} type="button" onClick={() => setWalletToken(t)}
+                        className={`px-3 py-2 border text-xs font-mono transition-colors rounded-none ${walletToken === t ? "border-primary bg-primary/10 text-primary font-bold" : "border-border text-muted-foreground hover:border-primary/50"}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">Wallet Address</label>
+                  <input type="text" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)}
+                    placeholder={`Your ${walletChain.toUpperCase()} wallet address`}
+                    className="w-full bg-background border border-border p-3 text-sm focus:outline-none focus:border-primary rounded-none font-mono" />
+                  {walletChain && walletToken && (
+                    <p className="text-xs font-mono text-amber-500/80 mt-1.5">
+                      Buyers will send <strong className="text-amber-400">{walletToken}</strong> on <strong className="text-amber-400">{walletChain.toUpperCase()}</strong> to this address. Wrong chain = lost funds.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div>

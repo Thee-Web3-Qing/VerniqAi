@@ -53,6 +53,8 @@ export interface PaymentInfoResult {
   free?: boolean;
   generationsRemaining?: number;
   walletAddress?: string;
+  walletChain?: string;
+  walletToken?: string;
   priceUsd?: number;
   creatorName?: string;
 }
@@ -66,13 +68,14 @@ export interface PaymentCheckResult {
   purchased: boolean;
   generationsRemaining: number;
   pricePerGeneration: number;
+  walletChain?: string;
+  walletToken?: string;
 }
 
 export type CryptoChain = 'bsc' | 'eth' | 'polygon' | 'tron';
 
 export interface VerifyPaymentInput {
   txHash: string;
-  chain: CryptoChain;
   creatorId: string;
 }
 
@@ -122,6 +125,10 @@ export interface Profile {
   social_connections: SocialConnection[];
   /** @nullable */
   wallet_address?: string | null;
+  /** @nullable */
+  wallet_chain?: string | null;
+  /** @nullable */
+  wallet_token?: string | null;
   price_per_generation: number;
   total_generations_sold: number;
   creator_eligible: boolean;
@@ -141,6 +148,10 @@ export interface ProfileUpdate {
   social_connections?: SocialConnection[];
   /** @nullable */
   wallet_address?: string | null;
+  /** @nullable */
+  wallet_chain?: string | null;
+  /** @nullable */
+  wallet_token?: string | null;
   price_per_generation?: number;
   language?: Language;
 }

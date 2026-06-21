@@ -30,6 +30,8 @@ function profileToDto(p: typeof profilesTable.$inferSelect) {
     follower_count: p.followerCount,
     social_connections: socials,
     wallet_address: p.walletAddress ?? null,
+    wallet_chain: p.walletChain ?? null,
+    wallet_token: p.walletToken ?? null,
     price_per_generation: p.pricePerGeneration,
     total_generations_sold: p.totalGenerationsSold,
     creator_eligible: isCreatorEligible(socials),
@@ -59,6 +61,8 @@ router.put("/profile", requireAuth, async (req, res) => {
     voice_dna,
     social_connections,
     wallet_address,
+    wallet_chain,
+    wallet_token,
     price_per_generation,
     language,
   } = req.body;
@@ -76,6 +80,8 @@ router.put("/profile", requireAuth, async (req, res) => {
         voiceDna: voice_dna ?? null,
         socialConnections: social_connections ?? [],
         walletAddress: wallet_address ?? null,
+        walletChain: wallet_chain ?? null,
+        walletToken: wallet_token ?? null,
         pricePerGeneration: price_per_generation ?? 0,
         language: language ?? "english",
       })
@@ -107,6 +113,8 @@ router.put("/profile", requireAuth, async (req, res) => {
       ...(voice_dna !== undefined && { voiceDna: voice_dna }),
       ...(social_connections !== undefined && { socialConnections: social_connections }),
       ...(wallet_address !== undefined && { walletAddress: wallet_address }),
+      ...(wallet_chain !== undefined && { walletChain: wallet_chain }),
+      ...(wallet_token !== undefined && { walletToken: wallet_token }),
       ...(price_per_generation !== undefined && { pricePerGeneration: price_per_generation }),
       ...(language !== undefined && { language }),
     })

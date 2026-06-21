@@ -16,6 +16,8 @@ export const profilesTable = pgTable("profiles", {
   followerCount: integer("follower_count").notNull().default(0),
   socialConnections: jsonb("social_connections").default([]),
   walletAddress: text("wallet_address"),
+  walletChain: text("wallet_chain"),
+  walletToken: text("wallet_token"),
   pricePerGeneration: integer("price_per_generation").notNull().default(0),
   totalGenerationsSold: integer("total_generations_sold").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

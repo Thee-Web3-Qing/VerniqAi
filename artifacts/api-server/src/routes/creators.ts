@@ -24,6 +24,8 @@ function profileToDto(p: typeof profilesTable.$inferSelect) {
     follower_count: p.followerCount,
     social_connections: socials,
     wallet_address: p.walletAddress ?? null,
+    wallet_chain: p.walletChain ?? null,
+    wallet_token: p.walletToken ?? null,
     price_per_generation: p.pricePerGeneration,
     total_generations_sold: p.totalGenerationsSold,
     creator_eligible: isCreatorEligible(socials),

@@ -1,5 +1,5 @@
 import { useGetCreator, useCheckVoicePurchase, useVerifyVoicePayment, useGetPaymentInfo } from "@workspace/api-client-react";
-import type { SocialConnection, CryptoChain } from "@workspace/api-client-react";
+import type { SocialConnection } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
 import { Brain, Copy, CheckCircle2, Lock, Unlock, ExternalLink, X, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -11,12 +11,20 @@ const PLATFORM_ICONS: Record<string, string> = {
   youtube: "▶", linkedin: "💼", podcast: "🎙",
 };
 
-const CHAINS: { id: CryptoChain; label: string; symbol: string; note: string }[] = [
-  { id: "bsc",     label: "BNB Smart Chain", symbol: "BNB / USDT",  note: "Low fees — recommended" },
-  { id: "eth",     label: "Ethereum",         symbol: "ETH / USDT",  note: "" },
-  { id: "polygon", label: "Polygon",           symbol: "MATIC / USDT", note: "Very low fees" },
-  { id: "tron",    label: "Tron",              symbol: "TRX / USDT",  note: "Popular in Nigeria" },
-];
+const CHAIN_LABELS: Record<string, string> = {
+  bsc: "BNB Smart Chain (BSC)",
+  eth: "Ethereum",
+  polygon: "Polygon",
+  tron: "Tron",
+};
+
+const TOKEN_STANDARDS: Record<string, Record<string, string>> = {
+  bsc:     { USDT: "USDT (BEP-20)", USDC: "USDC (BEP-20)", BNB: "BNB" },
+  eth:     { USDT: "USDT (ERC-20)", USDC: "USDC (ERC-20)", ETH: "ETH" },
+  polygon: { USDT: "USDT (Polygon)", USDC: "USDC (Polygon)", POL: "POL (MATIC)" },
+  tron:    { USDT: "USDT (TRC-20)", USDC: "USDC (TRC-20)", TRX: "TRX" },
+};
+
 
 function truncateAddress(addr: string) {
   if (addr.length <= 14) return addr;
@@ -27,6 +35,8 @@ function CryptoPayModal({
   creatorId,
   creatorName,
   walletAddress,
+  walletChain,
+  walletToken,
   priceUsd,
   onClose,
   onSuccess,
@@ -34,17 +44,22 @@ function CryptoPayModal({
   creatorId: string;
   creatorName: string;
   walletAddress: string;
+  walletChain: string;
+  walletToken: string;
   priceUsd: number;
   onClose: () => void;
   onSuccess: () => void;
 }) {
   const [step, setStep] = useState<"info" | "verify" | "done">("info");
-  const [chain, setChain] = useState<CryptoChain>("bsc");
   const [txHash, setTxHash] = useState("");
   const [copiedWallet, setCopiedWallet] = useState(false);
   const [verifyError, setVerifyError] = useState("");
   const verifyPayment = useVerifyVoicePayment();
   const queryClient = useQueryClient();
+
+  const chainLabel = CHAIN_LABELS[walletChain] ?? walletChain.toUpperCase();
+  const tokenLabel = TOKEN_STANDARDS[walletChain]?.[walletToken] ?? walletToken;
+  const notConfigured = !walletAddress || !walletChain || !walletToken;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(walletAddress);
@@ -56,7 +71,7 @@ function CryptoPayModal({
     if (!txHash.trim()) return;
     setVerifyError("");
     verifyPayment.mutate(
-      { txHash: txHash.trim(), chain, creatorId },
+      { txHash: txHash.trim(), creatorId },
       {
         onSuccess: () => {
           setStep("done");
@@ -65,7 +80,7 @@ function CryptoPayModal({
           setTimeout(onSuccess, 1800);
         },
         onError: (err: any) => {
-          setVerifyError(err?.message ?? "Could not verify transaction. Check the hash and chain.");
+          setVerifyError(err?.message ?? "Could not verify transaction. Check the hash.");
         },
       }
     );
@@ -74,83 +89,82 @@ function CryptoPayModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
       <div className="bg-background border border-border w-full max-w-lg relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-        >
+        <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
           <X className="w-5 h-5" />
         </button>
 
         {step === "info" && (
           <div className="p-8 space-y-6">
-            {!walletAddress ? (
+            {notConfigured ? (
               <div className="text-center space-y-3">
                 <div className="text-xs font-mono text-amber-500 uppercase tracking-widest">Not Ready</div>
                 <h2 className="text-xl font-black font-sans">Creator hasn't set up payments</h2>
                 <p className="text-sm text-muted-foreground font-mono">
-                  This creator hasn't configured a wallet address yet. Check back later or contact them directly.
+                  This creator hasn't configured a wallet address and blockchain yet. Check back later.
                 </p>
                 <button onClick={onClose} className="mt-4 w-full py-3 border border-border text-sm font-mono hover:border-primary transition-colors">
                   Close
                 </button>
               </div>
-            ) : (<>
-            <div>
-              <div className="text-xs font-mono text-primary uppercase tracking-widest mb-1">Step 1 of 2</div>
-              <h2 className="text-xl font-black font-sans">Send crypto to unlock this voice</h2>
-              <p className="text-sm text-muted-foreground font-mono mt-1">
-                Send <span className="font-bold text-foreground">${priceUsd.toFixed(2)} USD</span> worth of crypto to {creatorName}'s wallet. You'll get <span className="font-bold text-foreground">3 generations</span>.
-              </p>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <div className="text-xs font-mono text-primary uppercase tracking-widest mb-1">Step 1 of 2</div>
+                  <h2 className="text-xl font-black font-sans">Send crypto to unlock</h2>
+                  <p className="text-sm text-muted-foreground font-mono mt-1">
+                    You'll get <span className="font-bold text-foreground">3 generations</span> of {creatorName}'s voice.
+                  </p>
+                </div>
 
-            {/* Wallet address */}
-            <div className="border border-border bg-secondary p-4 space-y-2">
-              <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Creator's wallet address</div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-mono text-foreground flex-1 break-all">{walletAddress}</span>
-                <button
-                  onClick={handleCopy}
-                  className="flex-shrink-0 p-2 border border-border hover:border-primary transition-colors"
-                  title="Copy address"
-                >
-                  {copiedWallet ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <Copy className="w-4 h-4 text-muted-foreground" />
-                  )}
+                {/* What to send — locked */}
+                <div className="border border-primary/40 bg-primary/5 p-4 space-y-3">
+                  <div className="text-xs font-mono text-primary uppercase tracking-widest font-bold">Exactly what to send</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-muted-foreground">Token</span>
+                    <span className="text-sm font-black font-sans text-foreground">{tokenLabel}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-muted-foreground">Network / Chain</span>
+                    <span className="text-sm font-black font-sans text-foreground">{chainLabel}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-muted-foreground">Amount (USD equiv.)</span>
+                    <span className="text-sm font-black font-sans text-foreground">${priceUsd.toFixed(2)}</span>
+                  </div>
+                  <p className="text-xs font-mono text-amber-400/90 pt-1 border-t border-border">
+                    ⚠ Only send {tokenLabel} on {chainLabel}. Sending any other token or chain = lost funds.
+                  </p>
+                </div>
+
+                {/* Wallet address */}
+                <div className="border border-border bg-secondary p-4 space-y-2">
+                  <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Send to this address</div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-mono text-foreground flex-1 break-all">{walletAddress}</span>
+                    <button onClick={handleCopy} className="flex-shrink-0 p-2 border border-border hover:border-primary transition-colors" title="Copy">
+                      {copiedWallet ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
+                    </button>
+                  </div>
+                  {copiedWallet && <p className="text-xs font-mono text-green-500">Copied!</p>}
+                </div>
+
+                {/* Ramphub CTA */}
+                <div className="border border-border bg-card p-4 space-y-2">
+                  <div className="text-xs font-mono text-muted-foreground uppercase tracking-widest font-bold">Don't have crypto?</div>
+                  <p className="text-xs font-mono text-muted-foreground">
+                    Buy <span className="font-bold text-foreground">{tokenLabel}</span> with Naira or bank transfer via <span className="font-bold text-foreground">Ramphub</span>.
+                  </p>
+                  <a href="https://ramphub.com" target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm font-bold text-primary hover:underline">
+                    Buy crypto on Ramphub <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+
+                <button onClick={() => setStep("verify")} className="w-full py-4 bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors">
+                  I've sent the payment →
                 </button>
-              </div>
-              {copiedWallet && <p className="text-xs font-mono text-green-500">Copied!</p>}
-            </div>
-
-            {/* Ramphub CTA */}
-            <div className="border border-primary/30 bg-primary/5 p-4 space-y-3">
-              <div className="text-xs font-mono text-primary uppercase tracking-widest font-bold">Don't have crypto?</div>
-              <p className="text-xs font-mono text-muted-foreground">
-                Use <span className="font-bold text-foreground">Ramphub</span> to buy crypto with Naira or any currency — cards, bank transfer, mobile money.
-              </p>
-              <a
-                href="https://ramphub.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
-              >
-                Buy crypto on Ramphub <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-
-            {/* Chain note */}
-            <p className="text-xs font-mono text-muted-foreground">
-              Supports BSC, Ethereum, Polygon, and Tron. After sending, click below to enter your transaction hash.
-            </p>
-
-            <button
-              onClick={() => setStep("verify")}
-              className="w-full py-4 bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors"
-            >
-              I've sent the payment →
-            </button>
-          </>)}
+              </>
+            )}
           </div>
         )}
 
@@ -164,28 +178,10 @@ function CryptoPayModal({
               </p>
             </div>
 
-            {/* Chain selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Which chain did you send on?</label>
-              <div className="grid grid-cols-2 gap-2">
-                {CHAINS.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setChain(c.id)}
-                    className={`p-3 border text-left transition-colors ${
-                      chain === c.id
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <div className="text-xs font-bold font-sans">{c.label}</div>
-                    <div className="text-xs font-mono text-muted-foreground">{c.symbol}</div>
-                    {c.note && (
-                      <div className="text-xs font-mono text-primary mt-0.5">{c.note}</div>
-                    )}
-                  </button>
-                ))}
-              </div>
+            {/* Locked chain display */}
+            <div className="border border-border bg-secondary px-4 py-3 flex items-center justify-between">
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Chain (locked)</span>
+              <span className="text-sm font-black font-sans text-primary">{tokenLabel} · {chainLabel}</span>
             </div>
 
             {/* Tx hash */}
@@ -206,10 +202,7 @@ function CryptoPayModal({
             )}
 
             <div className="flex gap-3">
-              <button
-                onClick={() => setStep("info")}
-                className="px-4 py-3 border border-border text-sm font-bold hover:border-primary transition-colors"
-              >
+              <button onClick={() => setStep("info")} className="px-4 py-3 border border-border text-sm font-bold hover:border-primary transition-colors">
                 ← Back
               </button>
               <button
@@ -218,7 +211,7 @@ function CryptoPayModal({
                 className="flex-1 py-3 bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {verifyPayment.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-                {verifyPayment.isPending ? "Verifying on-chain…" : "Verify & Unlock"}
+                {verifyPayment.isPending ? "Verifying on-chain…" : "Verify & Unlock →"}
               </button>
             </div>
           </div>
@@ -228,7 +221,7 @@ function CryptoPayModal({
           <div className="p-8 flex flex-col items-center gap-4 text-center">
             <CheckCircle2 className="w-14 h-14 text-green-500" />
             <h2 className="text-xl font-black font-sans">Voice unlocked!</h2>
-            <p className="text-sm font-mono text-muted-foreground">Taking you to create content now…</p>
+            <p className="text-sm font-mono text-muted-foreground">3 generations ready. Taking you to create now…</p>
           </div>
         )}
       </div>
@@ -278,6 +271,8 @@ export default function CreatorProfile() {
           creatorId={creator.id}
           creatorName={creator.display_name || "Creator"}
           walletAddress={creator.wallet_address || ""}
+          walletChain={creator.wallet_chain || ""}
+          walletToken={creator.wallet_token || ""}
           priceUsd={creator.price_per_generation / 100}
           onClose={() => setShowPayModal(false)}
           onSuccess={() => { setShowPayModal(false); handleUseVoice(); }}
