@@ -2,18 +2,21 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getAuth } from "@clerk/express";
 import { db, profilesTable, voicePurchasesTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 const router = Router();
 
 type Chain = "bsc" | "eth" | "polygon" | "tron";
 
-const CHAIN_RPC: Record<Chain, string> = {
-  bsc: "https://bsc-dataseed.binance.org/",
-  eth: "https://cloudflare-eth.com/",
-  polygon: "https://polygon-rpc.com/",
-  tron: "https://api.trongrid.io/",
-};
+function alchemyRpc(chain: Exclude<Chain, "tron">): string {
+  const key = process.env.ALCHEMY_API_KEY ?? "";
+  const slugs: Record<Exclude<Chain, "tron">, string> = {
+    eth: "eth-mainnet",
+    polygon: "polygon-mainnet",
+    bsc: "bnb-mainnet",
+  };
+  return `https://${slugs[chain]}.g.alchemy.com/v2/${key}`;
+}
 
 type TronTx = {
   ret?: Array<{ contractRet?: string }>;
@@ -35,7 +38,7 @@ async function verifyOnChain(txHash: string, creatorWallet: string, chain: Chain
       return confirmed && toAddr.toLowerCase().includes(creatorWallet.replace("0x", "").toLowerCase());
     }
 
-    const rpc = CHAIN_RPC[chain];
+    const rpc = alchemyRpc(chain as Exclude<Chain, "tron">);
     const txRes = await fetch(rpc, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -170,6 +173,27 @@ router.get("/payment/check/:creatorId", requireAuth, async (req, res) => {
     walletChain: creator.walletChain ?? null,
     walletToken: creator.walletToken ?? null,
   });
+});
+
+router.get("/payment/sales", requireAuth, async (req, res) => {
+  const { userId } = getAuth(req);
+  const rows = await db
+    .select()
+    .from(voicePurchasesTable)
+    .where(eq(voicePurchasesTable.creatorId, userId!))
+    .orderBy(desc(voicePurchasesTable.createdAt));
+
+  res.json(rows.map((r) => ({
+    id: r.id,
+    buyer_user_id: r.buyerUserId,
+    tx_hash: r.flwTransactionId ?? null,
+    tx_ref: r.txRef ?? null,
+    chain: r.txRef ? r.txRef.split(":")[0] : null,
+    amount_paid: r.amountPaid,
+    generations_remaining: r.generationsRemaining,
+    status: r.status,
+    created_at: r.createdAt.toISOString(),
+  })));
 });
 
 export default router;

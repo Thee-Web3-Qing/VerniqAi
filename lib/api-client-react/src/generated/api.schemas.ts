@@ -317,6 +317,21 @@ export interface FeedPostInput {
   voice_match: number;
 }
 
+export interface VoiceSale {
+  id: string;
+  buyer_user_id: string;
+  /** @nullable */
+  tx_hash?: string | null;
+  /** @nullable */
+  tx_ref?: string | null;
+  /** @nullable */
+  chain?: string | null;
+  amount_paid: number;
+  generations_remaining: number;
+  status: string;
+  created_at: string;
+}
+
 export interface PublicProfile {
   id: string;
   username: string;

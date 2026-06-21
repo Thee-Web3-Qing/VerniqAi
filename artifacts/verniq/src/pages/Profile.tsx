@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useGetMyProfile, useUpdateMyProfile, useListMyOrgs } from "@workspace/api-client-react";
-import type { SocialConnection, SocialPlatformId } from "@workspace/api-client-react";
+import { useGetMyProfile, useUpdateMyProfile, useListMyOrgs, useGetCreatorSales } from "@workspace/api-client-react";
+import type { SocialConnection, SocialPlatformId, VoiceSale } from "@workspace/api-client-react";
 import { useClerk } from "@clerk/react";
 import { Brain, Edit3, Globe, Clock, Zap, MessageSquare, Mic, DollarSign, CheckCircle2, CheckCircle, Building2, ExternalLink } from "lucide-react";
 
@@ -35,6 +35,7 @@ const SOCIAL_PLATFORMS: { id: SocialPlatformId; label: string; icon: string }[] 
 
 export default function Profile() {
   const { data: profile, isLoading } = useGetMyProfile();
+  const { data: sales } = useGetCreatorSales();
   const updateProfile = useUpdateMyProfile();
   const { data: myOrgs } = useListMyOrgs();
   const { signOut } = useClerk();
@@ -52,6 +53,7 @@ export default function Profile() {
   const [walletChain, setWalletChain] = useState("bsc");
   const [walletToken, setWalletToken] = useState("USDT");
   const [pricePerGen, setPricePerGen] = useState(50);
+  const [priceStr, setPriceStr] = useState("0.50");
   const [creatorSaved, setCreatorSaved] = useState(false);
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export default function Profile() {
       setWalletChain(profile.wallet_chain ?? "bsc");
       setWalletToken(profile.wallet_token ?? "USDT");
       setPricePerGen(profile.price_per_generation || 50);
+      setPriceStr(((profile.price_per_generation || 50) / 100).toFixed(2));
     }
   }, [profile]);
 
@@ -448,6 +451,81 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Creator Sales */}
+      {profile?.is_public_creator && (
+        <div className="mt-10 border border-border bg-card">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
+            <DollarSign className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-black font-sans text-primary uppercase tracking-wider">Voice Sales</h2>
+            {sales && sales.length > 0 && (
+              <span className="ml-auto text-xs font-mono text-muted-foreground">{sales.length} purchase{sales.length !== 1 ? "s" : ""}</span>
+            )}
+          </div>
+          <div className="p-6">
+            {!sales || sales.length === 0 ? (
+              <p className="text-sm text-muted-foreground font-mono">No sales yet. Share your voice profile to start earning.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono border-collapse">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="text-left py-2 pr-4 font-semibold">Date</th>
+                      <th className="text-left py-2 pr-4 font-semibold">Chain</th>
+                      <th className="text-left py-2 pr-4 font-semibold">Amount</th>
+                      <th className="text-left py-2 pr-4 font-semibold">Gens left</th>
+                      <th className="text-left py-2 pr-4 font-semibold">Status</th>
+                      <th className="text-left py-2 font-semibold">Tx</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map((s: VoiceSale) => {
+                      const chain = s.chain ?? "—";
+                      const explorerBase: Record<string, string> = {
+                        eth: "https://etherscan.io/tx/",
+                        polygon: "https://polygonscan.com/tx/",
+                        bsc: "https://bscscan.com/tx/",
+                        tron: "https://tronscan.org/#/transaction/",
+                      };
+                      const explorerUrl = s.tx_hash && explorerBase[chain]
+                        ? `${explorerBase[chain]}${s.tx_hash}`
+                        : null;
+                      return (
+                        <tr key={s.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
+                          <td className="py-2 pr-4 text-muted-foreground">
+                            {new Date(s.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}
+                          </td>
+                          <td className="py-2 pr-4 uppercase text-foreground">{chain}</td>
+                          <td className="py-2 pr-4 text-green-500">${(s.amount_paid / 100).toFixed(2)}</td>
+                          <td className="py-2 pr-4 text-foreground">{s.generations_remaining}</td>
+                          <td className="py-2 pr-4">
+                            <span className={`px-1.5 py-0.5 border text-[10px] uppercase ${
+                              s.status === "active"
+                                ? "border-green-500/30 bg-green-500/10 text-green-500"
+                                : "border-border text-muted-foreground"
+                            }`}>{s.status}</span>
+                          </td>
+                          <td className="py-2">
+                            {explorerUrl ? (
+                              <a href={explorerUrl} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-primary hover:underline">
+                                {s.tx_hash!.slice(0, 8)}…
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Brand Voice Teams */}
       <div className="mt-10 border border-border bg-card">

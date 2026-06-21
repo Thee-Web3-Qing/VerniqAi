@@ -1144,3 +1144,20 @@ export const useGetPublicProfile = <TData = PublicProfile, TError = ErrorType<un
   return useQuery({ queryKey: getPublicProfileQueryKey(username), queryFn, enabled: !!username, ...options?.query });
 };
 
+// ─── Creator Sales ────────────────────────────────────────────────────────────
+
+export const getCreatorSalesQueryKey = () => ['/api/payment/sales'] as const;
+
+export const getCreatorSales = async (
+  options?: SecondParameter<typeof customFetch>,
+): Promise<VoiceSale[]> => {
+  return customFetch<VoiceSale[]>('/api/payment/sales', { ...options, method: 'GET' });
+};
+
+export const useGetCreatorSales = <TData = VoiceSale[], TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<VoiceSale[], TError, TData> }
+): UseQueryResult<TData, TError> => {
+  const queryFn: QueryFunction<VoiceSale[]> = () => getCreatorSales();
+  return useQuery({ queryKey: getCreatorSalesQueryKey(), queryFn, ...options?.query });
+};
+
