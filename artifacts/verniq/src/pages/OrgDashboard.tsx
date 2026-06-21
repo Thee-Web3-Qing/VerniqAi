@@ -129,7 +129,7 @@ export default function OrgDashboard() {
   };
 
   return (
-    <div className="container mx-auto px-4 md:px-8 py-12 max-w-4xl">
+    <div className="w-full px-6 md:px-10 lg:px-16 py-12">
       <header className="mb-10 border-b border-border pb-8">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">

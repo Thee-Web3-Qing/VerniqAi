@@ -52,7 +52,7 @@ export default function CreatorProfile() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
+    <div className="w-full px-6 md:px-10 lg:px-16 py-12">
       {/* Header */}
       <div className="flex items-start gap-6 mb-10 pb-8 border-b border-border">
         <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-secondary border border-border flex-shrink-0 overflow-hidden flex items-center justify-center">

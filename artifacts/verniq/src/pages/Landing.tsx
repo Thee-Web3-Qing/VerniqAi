@@ -6,7 +6,7 @@ export default function Landing() {
   return (
     <div className="relative">
       {/* Hero */}
-      <div className="container mx-auto px-6 md:px-8 pt-20 pb-24 max-w-6xl">
+      <div className="w-full px-6 md:px-10 lg:px-16 pt-20 pb-24">
         <div className="inline-flex items-center gap-2 text-muted-foreground text-xs font-mono mb-10 font-bold tracking-widest uppercase border border-border bg-card px-3 py-1 rounded-full">
           <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0"></span>
           VOICE DNA · MARKETPLACE · V0.1 BETA
@@ -72,7 +72,7 @@ export default function Landing() {
 
       {/* How It Works */}
       <div className="border-t border-border bg-background">
-        <div className="container mx-auto px-6 md:px-8 py-24 max-w-6xl">
+        <div className="w-full px-6 md:px-10 lg:px-16 py-24">
           <div className="text-xs font-mono font-bold tracking-widest text-muted-foreground uppercase mb-12">
             HOW IT WORKS
           </div>
@@ -102,7 +102,7 @@ export default function Landing() {
       
       {/* Visual Preview Section */}
       <div className="border-t border-border bg-background py-24">
-        <div className="container mx-auto px-6 md:px-8 max-w-6xl">
+        <div className="w-full px-6 md:px-10 lg:px-16">
            <div className="grid md:grid-cols-2 gap-8">
               {/* TikTok Card */}
               <div className="border border-border bg-card p-8 rounded-none">
@@ -161,7 +161,7 @@ export default function Landing() {
 
       {/* For beginners / For creators */}
       <div className="border-t border-border">
-        <div className="container mx-auto px-6 md:px-8 max-w-6xl">
+        <div className="w-full px-6 md:px-10 lg:px-16">
           <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
             {/* For beginners */}
             <div className="py-24 md:pr-16">
@@ -226,7 +226,7 @@ export default function Landing() {
       
       {/* Final CTA */}
       <div className="border-t border-border bg-card py-24 text-center">
-        <div className="container mx-auto px-6 max-w-2xl">
+        <div className="w-full px-6 md:px-10 lg:px-16">
           <h2 className="text-5xl font-sans font-black mb-4">Your voice. Ready in 3 minutes.</h2>
           <p className="text-lg text-muted-foreground mb-8">No writing prompts. No templates. Just you.</p>
           

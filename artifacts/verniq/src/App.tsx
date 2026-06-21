@@ -71,7 +71,7 @@ function Layout({ children }: { children: ReactNode }) {
       </Show>
       
       <header className="border-b border-border sticky top-0 bg-background/80 backdrop-blur z-50">
-        <div className="container mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
+        <div className="w-full px-6 md:px-10 lg:px-16 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <button onClick={() => navigateTo("/")} data-testid="nav-logo">
               <Logo />

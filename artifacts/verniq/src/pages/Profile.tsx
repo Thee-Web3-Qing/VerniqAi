@@ -113,7 +113,7 @@ export default function Profile() {
   const creatorEligible = socialConns.some(c => c.followerCount >= 5000);
 
   return (
-    <div className="container mx-auto px-4 md:px-8 py-12 max-w-4xl">
+    <div className="w-full px-6 md:px-10 lg:px-16 py-12">
       {/* Header */}
       <header className="mb-10 border-b border-border pb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="flex items-center gap-5">

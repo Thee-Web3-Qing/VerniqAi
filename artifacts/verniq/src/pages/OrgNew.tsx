@@ -28,7 +28,7 @@ export default function OrgNew() {
   };
 
   return (
-    <div className="container mx-auto px-4 md:px-8 py-12 max-w-xl">
+    <div className="w-full px-6 md:px-10 lg:px-16 py-12">
       <div className="flex items-center justify-between mb-12">
         <Logo />
         <button

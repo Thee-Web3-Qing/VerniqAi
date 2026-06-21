@@ -311,7 +311,7 @@ export default function Onboarding() {
   // ── ANALYSING / REVIEW / SAVING STAGE ─────────────────────────────────────
   if (stage === "analysing" || stage === "review" || stage === "saving") {
     return (
-      <div className="min-h-screen flex flex-col px-4 py-8 max-w-2xl mx-auto">
+      <div className="min-h-screen flex flex-col px-6 md:px-10 lg:px-16 py-8">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-7 h-7 bg-primary flex items-center justify-center flex-shrink-0">
             <span className="text-xs font-black text-primary-foreground">V</span>
@@ -474,7 +474,7 @@ export default function Onboarding() {
 
   // ── INPUT STAGE ───────────────────────────────────────────────────────────
   return (
-    <div className="container mx-auto px-4 md:px-8 py-12 max-w-3xl">
+    <div className="w-full px-6 md:px-10 lg:px-16 py-12">
       <div className="flex items-center justify-between mb-12">
         <Logo />
         <div className="flex items-center gap-2">

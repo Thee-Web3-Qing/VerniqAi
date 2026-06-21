@@ -154,7 +154,7 @@ export default function Results() {
   };
 
   return (
-    <div className="container mx-auto px-4 md:px-8 py-10 max-w-4xl">
+    <div className="w-full px-6 md:px-10 lg:px-16 py-10">
       {/* Header */}
       <div className="flex items-center justify-between mb-8 border-b border-border pb-6">
         <div>

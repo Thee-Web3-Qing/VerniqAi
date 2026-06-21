@@ -8,7 +8,7 @@ export default function History() {
   if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono">Loading history...</div>;
 
   return (
-    <div className="container mx-auto px-4 md:px-8 py-12 max-w-4xl">
+    <div className="w-full px-6 md:px-10 lg:px-16 py-12">
       <header className="mb-12 border-b border-border pb-8">
         <h1 className="text-4xl font-black font-sans mb-2">History</h1>
         <p className="text-muted-foreground font-mono text-sm">Your previously generated and saved ideas.</p>
