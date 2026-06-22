@@ -28,6 +28,8 @@ import VoicePublicProfile from "@/pages/VoicePublicProfile";
 import PaymentCallback from "@/pages/PaymentCallback";
 import { Logo } from "@/components/Logo";
 
+import VideoTemplate from "@/components/video/VideoTemplate";
+
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
@@ -278,6 +280,7 @@ function Router() {
             <Route path="/feed" component={Feed} />
             <Route path="/voice/:username" component={VoicePublicProfile} />
             <Route path="/payment/callback">{() => <ProtectedRoute component={PaymentCallback} />}</Route>
+            <Route path="/video" component={VideoTemplate} />
             <Route component={NotFound} />
           </Switch>
         </Layout>
