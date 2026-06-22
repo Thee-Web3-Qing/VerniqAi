@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@clerk/react": "^6.10.0"
+    "@clerk/react": "^6.10.0",
+    "react-markdown": "^10.1.0"
   }
 }

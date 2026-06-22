@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import ReactMarkdown from "react-markdown";
 import { useListFeedPosts, useLikeFeedPost, getListFeedPostsQueryKey } from "@workspace/api-client-react";
 import type { FeedPost } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -67,8 +68,7 @@ function PostCard({ post }: { post: FeedPost }) {
   const [expanded, setExpanded] = useState(false);
 
   const content = post.content;
-  const isLong = content.length > 300;
-  const displayContent = isLong && !expanded ? content.slice(0, 300) + "…" : content;
+  const isLong = content.length > 400;
 
   const handleLike = () => {
     if (liked) return;
@@ -136,15 +136,34 @@ function PostCard({ post }: { post: FeedPost }) {
       {/* Content */}
       <div className="px-5 pb-4">
         <p className="text-xs font-mono text-muted-foreground mb-2 uppercase tracking-widest mt-3">Content</p>
-        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground/90">
-          {displayContent}
-        </pre>
+        <div className={`relative ${isLong && !expanded ? "max-h-52 overflow-hidden" : ""}`}>
+          <ReactMarkdown
+            className="prose prose-sm prose-invert max-w-none
+              prose-p:text-foreground/90 prose-p:leading-relaxed prose-p:my-2
+              prose-headings:text-foreground prose-headings:font-black prose-headings:font-sans prose-headings:mt-4 prose-headings:mb-1
+              prose-h1:text-base prose-h2:text-sm prose-h3:text-sm
+              prose-strong:text-foreground prose-strong:font-bold
+              prose-em:text-foreground/80
+              prose-ul:my-2 prose-ul:space-y-1 prose-ul:pl-4
+              prose-ol:my-2 prose-ol:space-y-1 prose-ol:pl-4
+              prose-li:text-foreground/90 prose-li:leading-relaxed prose-li:marker:text-primary
+              prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+              prose-blockquote:border-l-2 prose-blockquote:border-primary prose-blockquote:pl-3 prose-blockquote:text-muted-foreground prose-blockquote:not-italic
+              prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:rounded-none prose-code:text-xs
+              prose-hr:border-border"
+          >
+            {content}
+          </ReactMarkdown>
+          {isLong && !expanded && (
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+          )}
+        </div>
         {isLong && (
           <button
             onClick={() => setExpanded(!expanded)}
             className="text-xs font-mono text-primary mt-2 hover:underline"
           >
-            {expanded ? "Show less" : "Read more"}
+            {expanded ? "Show less ↑" : "Read more ↓"}
           </button>
         )}
       </div>
